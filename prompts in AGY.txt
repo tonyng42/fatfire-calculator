@@ -1,0 +1,84 @@
+review the fatfire_calculator.html file in my folder that was created elsewhere. I want to make changes to this app
+
+make the following changes:
+
+Dashboard:
+- create a Portfolio Project chart to show my total portfolio amount and a breakdown of the amount from different investment category. When I hover over the dashboard, it should show me the amount for the respective account type.
+
+make the icons in the "special adjustments and draws" a quarter of the current sizes, and move them to the side
+Inputs:
+- allow me to manually type in the inputs instead of only using the slide rule. ensure the numbers shown are in "," format.
+- ask for the withdrawal order based on account type. By default, it should start with taxable, tax-deferred, then tax-free.
+
+ask the user their tax filing status - and use filing single as the default.
+
+add more annual expense inputs so it will reflect the smile curve, where actually spending will vary based on age. you have to reflect these annual spending differences in you calculation logics and table:
+-change the current "Annual Expenses" to Annual Expenses to 65"
+- add a "Annual Expenses (66-75)" section. the default value will be the same at the "Annual Expenses to 65"
+- add a "Annual Expenses (76-85)" section.  the default value will be the same at the "Annual Expenses to 65"
+- 
+Calculation logics:
+- if I run out of money on an account, highlight it in red. show in my sources what account type you will draw from and the amount. 
+- allow me to manually type in the ages of when I want to start withdrawing from my retirement accounts
+- factor in RMD at the age of 75. the amount of RMD per year should be deducted from my tax-deferr accounts. you must reflect this in the dashboard and table
+
+
+Table section:
+- add a column so I see the actual RMD amount that I need to withdraw. ensure this amount is accounted for in my tax-def account balance
+- add an indicator to show if my planned total draw doesn't meet my gross spend, then factor in that I will need withdrawal from another account type even if I have started withdrawing from that category 
+- include a NIIT column in the table for when my qualified withdrawal triggers this tax. ensure to add this to the tax bill.
+- for my federal tax, ensure to account for the 0% tax threshold. Assume the user files as single.
+
+
+create a information icon next to each entry so that when my mouse pointer hovers over it, you will give me a brief description of what it is.
+
+ensure in the math logic that:
+- when total withdrewal per year - which includes my taxable, tax deferred, tax free, Hong Kong, and dividends - that if this is less than the 
+
+to enter:
+in the Withdrawal input section:
+- add an option for SEPP. if the user wants to enable SEPP, ask the start year, and provide the 3 withdraw options. Make sure that this withdraw is taken from the tax-deferred account amount. 
+- add a field in withdrawal for one-time large ticket items that will be withdrawn from taxable accounts. Request the number of large withdrawals, and assume each withdrawal will be differennt.
+
+logic:
+- with the exception of SEPP, do not withdraw from my tax-deferred accounts before the age of 59 1/2 as that incurrs a heavy penality. 
+
+if I have a shortfall in any year, show me the amount of the shortfall for that year when my mouse hovers over the word "shortfall" on the "Sources" column. also, offer suggestions of the % percentage and account types I should withdraw from to fix the shortfall - factoring in the taxes that I will need to pay from any newly recommended withdrawals 
+
+in growth rates, the rates are all manual at the moment. Add options for different investment styles - based on the historical avg of the last 30 years - such as:
+- sp 500 only
+- qqq only
+- aggressive style
+- 80% qqq, 20% muni bonds
+- 50% qqq, 50% muni bonds
+- 50% qqq, 50% sp500
+- mix of muni bonds (50%), reit bonds (25%), and high-yield bonds (25%)
+
+
+# ADK / agents
+create a set of agents based on the ADK skills that you have. 
+- an agent that review the expected return an investment that is only in sp500 index. use historical 30 year look back. the agent will 
+
+the headers aren't centered to their respective section. recenter "Annual Cash Flow", "Taxes Paid", and "withdrawn From"
+
+update the default input values:
+
+current age: 52
+retirement age: 55
+annual expenses: 200,000
+post-retirement return: 6
+
+in the initial portfolio balances:
+taxable account: 900000
+tax-deferred: 2000000
+tax-free: 1000000
+HK portfolio: 0
+
+growith rates:
+taxable pre-ret growth: 12
+tax-def pre-ret growth: 15
+tax-free pre-ret growth: 10
+HK portfolio growth: 5
+
+withdrawal rates:
+taxable - % withdrawn/year at start of retirement: 8

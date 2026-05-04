@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FatFIRE Retirement Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f5f4f0;color:#1a1a18;font-size:14px}
+.page{max-width:1400px;margin:0 auto;padding:1.5rem}
+h1{font-size:20px;font-weight:600;margin-bottom:4px;color:#1a1a18}
+.subtitle{font-size:13px;color:#6b6a65;margin-bottom:1.5rem}
+.panel{background:#fff;border:0.5px solid #d8d6cc;border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.panel-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b6a65;margin-bottom:1rem}
+.ctrl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ctrl-card{background:#f5f4f0;border-radius:8px;padding:.75rem 1rem}
+.ctrl-card.blue{border-left:3px solid #2563EB}
+.ctrl-card.amber{border-left:3px solid #D97706}
+.ctrl-card.green{border-left:3px solid #16A34A}
+.ctrl-card.gray{border-left:3px solid #6B7280}
+.ctrl-card.purple{border-left:3px solid #7C3AED}
+/* Tooltip container */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+/* Tooltip text */
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 220px;
+  background-color: #1F2937;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 0.5rem;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -110px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.75rem;
+  font-weight: normal;
+  line-height: 1.2;
+}
+/* Tooltip arrow */
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1F2937 transparent transparent transparent;
+}
+/* Show the tooltip on hover */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+/* Info icon style */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #4B5563;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.ctrl-label{font-size:11px;color:#6b6a65;margin-bottom:5px}
+.ctrl-row{display:flex;align-items:center;gap:8px}
+.ctrl-row input[type=range]{flex:1;cursor:pointer;accent-color:#2563EB}
+.ctrl-val{font-size:13px;font-weight:600;color:#1a1a18;min-width:64px;text-align:right}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem}
+.metric{background:#fff;border:0.5px solid #d8d6cc;border-radius:8px;padding:.875rem 1rem}
+.metric-label{font-size:11px;color:#6b6a65;margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:600;color:#1a1a18}
+.metric-value.g{color:#16A34A}.metric-value.a{color:#D97706}.metric-value.r{color:#DC2626}
+.formula-bar{font-size:12px;color:#4b5563;padding:.6rem 1rem;background:#EFF6FF;border-radius:8px;border-left:3px solid #2563EB;margin-bottom:.75rem}
+.note-bar{font-size:11px;color:#6b6a65;padding:.5rem 1rem;background:#f5f4f0;border-radius:8px;margin-bottom:.75rem}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#6b6a65;margin-bottom:.75rem;align-items:center}
+.leg{display:flex;align-items:center;gap:5px}
+.leg-box{width:10px;height:10px;border-radius:2px}
+.tbl-wrap{overflow-x:auto;border:0.5px solid #d8d6cc;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f5f4f0;color:#6b6a65;font-weight:600;font-size:10px;padding:7px 8px;text-align:right;border-bottom:0.5px solid #d8d6cc;white-space:nowrap}
+th:not(.grp-hdr):first-child,th:not(.grp-hdr):nth-child(2){text-align:left}
+td{padding:6px 8px;border-bottom:0.5px solid #eeece6;text-align:right;color:#1a1a18;white-space:nowrap}
+td:first-child{text-align:left;color:#6b6a65;font-weight:600}
+td:nth-child(2){text-align:left;color:#9ca3af;font-size:11px}
+tr:last-child td{border-bottom:none}
+tr.accum td{color:#9ca3af}tr.accum td:first-child{color:#9ca3af}
+tr.ret-start td{background:#EFF6FF;color:#1d4ed8;font-weight:600}
+tr.ss-start td{background:#F0FDF4;color:#15803d;font-weight:600}
+tr.warn td{background:#FFFBEB}
+tr.danger td{background:#FEF2F2}
+tr:hover td{background:#f9f8f4}
+tr.ret-start:hover td{background:#DBEAFE}
+tr.ss-start:hover td{background:#DCFCE7}
+tr.td-start td{background:#FEF3C7;color:#92400e;font-weight:600}
+tr.tf-start td{background:#DCFCE7;color:#15803d;font-weight:600}
+.shortfall-warning { background-color: #FEF2F2 !important; color: #B91C1C; font-weight: 600; border-left: 3px solid #DC2626 !important; }
+.pulsing { animation: pulse 2s infinite; border: 1px solid #F87171 !important; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    tr.shortfall td{background:#fef2f2!important;color:#b91c1c!important;font-weight:600}
+    tr.shortfall td:first-child{border-left:4px solid #ef4444!important}
+.pill{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;white-space:nowrap;display:inline-block;margin:1px}
+.pill-blue{background:#DBEAFE;color:#1d4ed8}
+.pill-amber{background:#FEF3C7;color:#92400e}
+.pill-green{background:#DCFCE7;color:#15803d}
+.pill-gray{background:#F3F4F6;color:#374151}
+.pill-cyan{background:#CFFAFE;color:#0e7490}
+.pill-purple{background:#F3E8FF;color:#6b21a8}
+
+.depleted-cell {
+  background: rgba(239, 68, 68, 0.07) !important;
+  color: #EF4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+/* --- Custom table cell suggest tooltips --- */
+.table-tooltip {
+  position: relative;
+  display: inline-block;
+}
+.table-tooltip .tooltiptext {
+  visibility: hidden;
+  width: 350px;
+  max-width: 80vw;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal !important;
+  background-color: #1F2937;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 0.75rem 0.875rem;
+  position: absolute;
+  z-index: 100;
+  bottom: 130%;
+  right: -10px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  font-size: 0.75rem;
+  font-weight: normal;
+  line-height: 1.4;
+  border: 1px solid #4B5563;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+.table-tooltip .tooltiptext ul {
+  margin: 0.35rem 0 0 0;
+  padding-left: 1.1rem;
+  list-style-type: disc;
+}
+.table-tooltip .tooltiptext li {
+  margin-bottom: 0.35rem;
+  white-space: normal !important;
+}
+.table-tooltip .tooltiptext li:last-child {
+  margin-bottom: 0;
+}
+.table-tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 25px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #1F2937 transparent transparent transparent;
+}
+.table-tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+/* --- End Custom table cell tooltips --- */
+
+.grp-hdr{background:#f5f4f0;font-size:10px;font-weight:600;color:#9ca3af;padding:5px 8px;text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid #d8d6cc;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+.export-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1.25rem;background:#fff;border:0.5px solid #d8d6cc;border-radius:10px}
+.export-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6b6a65;margin-right:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .15s}
+.btn:hover{opacity:.85;transform:translateY(-1px)}
+.btn-csv{background:#16A34A;color:#fff;border-color:#15803d}
+.btn-xlsx{background:#1d6f42;color:#fff;border-color:#166534}
+.btn-pdf{background:#DC2626;color:#fff;border-color:#b91c1c}
+.btn-json{background:#374151;color:#fff;border-color:#1f2937}
+.export-divider{width:1px;height:24px;background:#d8d6cc;margin:0 4px}
+@media print{.export-bar,.panel,.ctrl-card,.ctrl-row,.ctrl-grid,.formula-bar,.note-bar,.legend-row{display:none!important}.summary-grid{display:none!important}.tbl-wrap{border:none}.page{padding:0}body{background:#fff}table{font-size:9px}h1{display:block!important}}.print-only{display:none}.ctrl-num {
+  width: 80px;
+  padding: 2px 6px;
+  border: 1px solid #d8d6cc;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  text-align: right;
+  background: rgba(255, 255, 255, 0.9);
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: textfield;
+}
+.ctrl-num:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #fff;
+}
+.ctrl-num::-webkit-inner-spin-button, .ctrl-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>🏦 FatFIRE Retirement Calculator</h1>
+  <p class="subtitle">NYC early retirement projection · Adjust assumptions with sliders · Social Security at 65</p>
+
+  <div class="export-bar">
+    <span class="export-label">Export</span>
+    <button class="btn btn-csv" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-xlsx" onclick="exportXLSX()">⬇ Excel (.xlsx)</button>
+    <div class="export-divider"></div>
+    <button class="btn btn-pdf" onclick="exportPDF()">🖨 Print / PDF</button>
+    <div class="export-divider"></div>
+    <button class="btn btn-json" onclick="exportJSON()">{ } JSON</button>
+    <span style="margin-left:auto;font-size:11px;color:#9ca3af" id="export-status"></span>
+  </div>
+
+  <div class="print-only" id="print-assumptions"></div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">General settings</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card"><div class="ctrl-label">Current age <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Your current age today.</span></div></div><div class="ctrl-row"><input type="range" id="c-age" min="50" max="58" step="1" value="52"><input type="text" id="c-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="52"><span class="ctrl-val" id="c-age-v" style="display:none">52</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Retirement age <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">The age you plan to stop working.</span></div></div><div class="ctrl-row"><input type="range" id="r-age" min="52" max="62" step="1" value="55"><input type="text" id="r-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="55"><span class="ctrl-val" id="r-age-v" style="display:none">55</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Plan to age <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">The age up to which the plan is simulated.</span></div></div><div class="ctrl-row"><input type="range" id="p-age" min="80" max="100" step="1" value="85"><input type="text" id="p-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="85"><span class="ctrl-val" id="p-age-v" style="display:none">85</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">SS monthly benefit <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Expected Social Security monthly benefit in today's dollars.</span></div></div><div class="ctrl-row"><input type="range" id="ss-ben" min="0" max="5000" step="100" value="3500"><input type="text" id="ss-ben-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="3,500"><span class="ctrl-val" id="ss-ben-v" style="display:none">$2,800</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Annual expenses <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Target annual spending in today's dollars.</span></div></div><div class="ctrl-row"><input type="range" id="exp-base" min="100000" max="800000" step="5000" value="200000"><input type="text" id="exp-base-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="200,000"><span class="ctrl-val" id="exp-base-v" style="display:none">$200K</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Inflation rate <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual inflation rate.</span></div></div><div class="ctrl-row"><input type="range" id="infl" min="1.5" max="5" step="0.25" value="3"><input type="text" id="infl-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="3.0"><span class="ctrl-val" id="infl-v" style="display:none">3.0%</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Post-retirement return <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual return on portfolio after retirement.</span></div></div><div class="ctrl-row"><input type="range" id="post-ret" min="3" max="9" step="0.25" value="6"><input type="text" id="post-ret-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="6.0"><span class="ctrl-val" id="post-ret-v" style="display:none">6.0%</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Tax Filing Status <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Federal, state and surcharges progressive brackets will dynamically switch based on Single, Married Filing Jointly, or Married Filing Separately.</span></div></div><div class="ctrl-row" style="align-items: center; justify-content: flex-start; height: 38px;"><select id="filing-status" class="w-full px-2 py-1 text-sm border rounded bg-gray-700 text-white border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"><option value="single" selected>Single</option><option value="mfj">Married Filing Jointly</option><option value="mfs">Married Filing Separately</option></select></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Initial portfolio balances</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card"><div class="ctrl-label">Taxable accounts <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Initial balance of taxable brokerage accounts.</span></div></div><div class="ctrl-row"><input type="range" id="init-taxable" min="0" max="15000000" step="100000" value="900000"><input type="text" id="init-taxable-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="900,000"><span class="ctrl-val" id="init-taxable-v" style="display:none">$900K</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Tax-deferred <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Initial balance of traditional IRA/401k accounts.</span></div></div><div class="ctrl-row"><input type="range" id="init-td" min="0" max="5000000" step="50000" value="2000000"><input type="text" id="init-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="2,000,000"><span class="ctrl-val" id="init-td-v" style="display:none">$2.0M</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Tax-free <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Initial balance of Roth IRA/HSA accounts.</span></div></div><div class="ctrl-row"><input type="range" id="init-tf" min="0" max="5000000" step="25000" value="1000000"><input type="text" id="init-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="1,000,000"><span class="ctrl-val" id="init-tf-v" style="display:none">$1.0M</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">HK portfolio <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Initial balance of Hong Kong portfolio (non-US taxed).</span></div></div><div class="ctrl-row"><input type="range" id="init-hk" min="0" max="5000000" step="50000" value="0"><input type="text" id="init-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="0"><span class="ctrl-val" id="init-hk-v" style="display:none">$0</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Column 1: Standard Withdrawals -->
+    <div class="panel">
+      <div class="panel-title">Withdrawal rates &amp; start ages by account</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card blue" style="grid-column:1/-1"><div class="ctrl-label">Taxable — % withdrawn/yr <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of taxable account withdrawn annually.</span></div> · starts at retirement</div><div class="ctrl-row"><input type="range" id="wd-taxable" min="0" max="20" step="0.5" value="8"><input type="text" id="wd-taxable-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="8.0"><span class="ctrl-val" id="wd-taxable-v" style="display:none">8.0%</span></div></div>
+
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-deferred — % withdrawn/yr (Before 65) <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of tax-deferred account withdrawn annually before age 65.</span></div></div><div class="ctrl-row"><input type="range" id="wd-td" min="0" max="20" step="0.5" value="4"><input type="text" id="wd-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="4.0"><span class="ctrl-val" id="wd-td-v" style="display:none">4.0%</span></div></div>
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-deferred — % withdrawn/yr (65 to RMD) <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of tax-deferred account withdrawn annually from age 65 until RMD age (73).</span></div></div><div class="ctrl-row"><input type="range" id="wd-td-65" min="0" max="20" step="0.5" value="4"><input type="text" id="wd-td-65-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="4.0"><span class="ctrl-val" id="wd-td-65-v" style="display:none">4.0%</span></div></div>
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-deferred — start withdrawals at age <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Age to start withdrawing from tax-deferred accounts.</span></div></div><div class="ctrl-row"><input type="range" id="wd-td-age" min="54" max="73" step="1" value="65"><input type="text" id="wd-td-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="65"><span class="ctrl-val" id="wd-td-age-v" style="display:none">60</span></div></div>
+
+        <div class="ctrl-card green"><div class="ctrl-label">Tax-free (Roth/HSA) — % withdrawn/yr <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of tax-free account withdrawn annually.</span></div></div><div class="ctrl-row"><input type="range" id="wd-tf" min="0" max="20" step="0.5" value="4"><input type="text" id="wd-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="4.0"><span class="ctrl-val" id="wd-tf-v" style="display:none">2.0%</span></div></div>
+        <div class="ctrl-card green"><div class="ctrl-label">Tax-free — start withdrawals at age <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Age to start withdrawing from tax-free accounts.</span></div></div><div class="ctrl-row"><input type="range" id="wd-tf-age" min="54" max="80" step="1" value="72"><input type="text" id="wd-tf-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="72"><span class="ctrl-val" id="wd-tf-age-v" style="display:none">65</span></div></div>
+
+        <div class="ctrl-card gray" style="grid-column:1/-1"><div class="ctrl-label">HK portfolio — % withdrawn/yr <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of HK portfolio withdrawn annually.</span></div> (no US tax) · starts at retirement</div><div class="ctrl-row"><input type="range" id="wd-hk" min="0" max="20" step="0.5" value="0"><input type="text" id="wd-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0.0"><span class="ctrl-val" id="wd-hk-v" style="display:none">3.0%</span></div></div>
+        <div class="ctrl-card" style="grid-column:1/-1"><div class="ctrl-label">Withdrawal Order (after Taxable) <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Order in which accounts are depleted after taxable accounts.</span></div></div><div class="ctrl-row">
+          <select id="wd-order" class="w-full px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="td,tf,hk">Tax-Deferred -> Tax-Free -> HK (Default)</option>
+            <option value="td,hk,tf">Tax-Deferred -> HK -> Tax-Free</option>
+            <option value="tf,td,hk">Tax-Free -> Tax-Deferred -> HK</option>
+            <option value="tf,hk,td">Tax-Free -> HK -> Tax-Deferred</option>
+            <option value="hk,td,tf">HK -> Tax-Deferred -> Tax-Free</option>
+            <option value="hk,tf,td">HK -> Tax-Free -> Tax-Deferred</option>
+          </select>
+        </div></div>
+        <div class="ctrl-card" style="grid-column:1/-1"><div class="ctrl-row"><label class="flex items-center space-x-2"><input type="checkbox" id="wd-deplete" class="form-checkbox bg-gray-700 text-blue-500 border-gray-600 focus:ring-blue-500"><span class="text-sm text-white">Fully deplete account <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">If checked, fully depletes one account before moving to the next in specified order.</span></div> before moving to next</span></label></div></div>
+      </div>
+    </div>
+
+    <!-- Column 2: Stacked Growth Rates & Special Adjustments -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <!-- Panel 2A: Growth & Tax Assumptions -->
+      <div class="panel" style="margin-bottom: 0;">
+        <div class="panel-title">Growth rates &amp; tax assumptions</div>
+        <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+          <div class="ctrl-card blue"><div class="ctrl-label">Taxable pre-ret growth <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual growth rate for taxable accounts before retirement.</span></div></div><div class="ctrl-row"><input type="range" id="g-tax" min="4" max="15" step="0.25" value="12"><input type="text" id="g-tax-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="12.0"><span class="ctrl-val" id="g-tax-v" style="display:none">12%</span></div></div>
+          <div class="ctrl-card amber"><div class="ctrl-label">Tax-def pre-ret growth <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual growth rate for tax-deferred accounts before retirement.</span></div></div><div class="ctrl-row"><input type="range" id="g-td" min="4" max="18" step="0.25" value="15"><input type="text" id="g-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="15.0"><span class="ctrl-val" id="g-td-v" style="display:none">15%</span></div></div>
+          <div class="ctrl-card green"><div class="ctrl-label">Tax-free pre-ret growth <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual growth rate for tax-free accounts before retirement.</span></div></div><div class="ctrl-row"><input type="range" id="g-tf" min="4" max="14" step="0.25" value="10"><input type="text" id="g-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="10.0"><span class="ctrl-val" id="g-tf-v" style="display:none">10%</span></div></div>
+          <div class="ctrl-card gray"><div class="ctrl-label">HK portfolio growth <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Assumed annual growth rate for HK portfolio.</span></div></div><div class="ctrl-row"><input type="range" id="g-hk" min="-8" max="6" step="0.25" value="5"><input type="text" id="g-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="5.0"><span class="ctrl-val" id="g-hk-v" style="display:none">5%</span></div></div>
+          <div class="ctrl-card blue"><div class="ctrl-label">Taxable — % LTCG <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of taxable withdrawals that are Long-Term Capital Gains.</span></div></div><div class="ctrl-row"><input type="range" id="cg-pct" min="0" max="100" step="5" value="70"><input type="text" id="cg-pct-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="60"><span class="ctrl-val" id="cg-pct-v" style="display:none">70%</span></div></div>
+          <div class="ctrl-card blue"><div class="ctrl-label">Taxable — % ordinary income <div class="tooltip"><span class="info-icon">ⓘ</span><span class="tooltiptext">Percentage of taxable withdrawals that are treated as ordinary income.</span></div></div><div class="ctrl-row"><input type="range" id="ord-pct" min="0" max="100" step="5" value="30"><input type="text" id="ord-pct-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0"><span class="ctrl-val" id="ord-pct-v" style="display:none">30%</span></div></div>
+        </div>
+      </div>
+
+      <!-- Panel 2B: Special Adjustments & One-Time Draws -->
+      <div class="panel" style="margin-top: 0;">
+        <div class="panel-title">Special Adjustments &amp; Draws</div>
+        <div class="ctrl-grid" style="grid-template-columns: 1fr">
+          <!-- SEPP Controls -->
+          <div class="ctrl-card custom-border" style="background-color: rgba(217, 119, 6, 0.05); border: 1px solid rgba(217, 119, 6, 0.3);">
+            <div class="ctrl-row flex justify-between items-center mb-2" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
+              <span class="text-sm font-semibold text-amber-500" style="display: inline-flex; align-items: center;">
+                IRS SEPP 72(t) Early Draws
+                <svg class="ml-1" style="width: 8px; height: 8px; transform: translateY(1px);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </span>
+              <label class="flex items-center space-x-1 cursor-pointer">
+                <input type="checkbox" id="sepp-enable" class="form-checkbox bg-gray-700 text-amber-500 border-gray-600 focus:ring-amber-500">
+                <span class="text-xs text-white font-medium">Enable SEPP</span>
+              </label>
+            </div>
+            <div id="sepp-inputs-wrapper" class="grid grid-cols-3 gap-2 text-xs opacity-50 transition-opacity duration-200" style="pointer-events: none;">
+              <div>
+                <label class="block text-gray-400 mb-1">Start Age <div class="tooltip"><span class="info-icon text-[10px]">ⓘ</span><span class="tooltiptext text-xs">Year when substantially equal payments must begin. Custom duration of Math.max(5 years, 59.5 - startAge) will apply.</span></div></label>
+                <input type="number" id="sepp-start-age" min="50" max="59" value="54" class="w-full px-2 py-1 border rounded bg-gray-700 text-white border-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500">
+              </div>
+              <div>
+                <label class="block text-gray-400 mb-1">Calculation Method</label>
+                <select id="sepp-method" class="w-full px-2 py-1 border rounded bg-gray-700 text-white border-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500">
+                  <option value="amort">Amortization (Fixed)</option>
+                  <option value="annuit">Annuitization (Fixed)</option>
+                  <option value="rmd">RMD (Variable)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-gray-400 mb-1">Interest Rate (%) <div class="tooltip"><span class="info-icon text-[10px]">ⓘ</span><span class="tooltiptext text-xs">Annual IRS interest rate. Typically capped at the greater of 5% or 120% Federal Mid-Term AFR rate.</span></div></label>
+                <input type="number" id="sepp-rate" min="0.1" max="6.5" step="0.05" value="5.0" class="w-full px-2 py-1 border rounded bg-gray-700 text-white border-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- One-Time Expenses Controls -->
+          <div class="ctrl-card custom-border" style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.3);">
+            <div class="ctrl-row flex justify-between items-center mb-2" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
+              <span class="text-sm font-semibold text-blue-400" style="display: inline-flex; align-items: center;">
+                One-Time Large Ticket Draws
+                <svg class="ml-1" style="width: 8px; height: 8px; transform: translateY(1px);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              </span>
+              <div class="flex items-center space-x-2">
+                <span class="text-[11px] text-gray-400 font-normal">Total Items</span>
+                <input type="number" id="oth-count" min="0" max="5" value="0" class="w-12 px-1 py-[2px] text-center border rounded bg-gray-700 text-white border-gray-600 focus:outline-none">
+              </div>
+            </div>
+            <div id="oth-rows-wrapper" class="flex flex-col gap-2 text-xs">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="padding: 1.5rem;">
+    <div class="panel-title">Portfolio Projection</div>
+    <div style="height: 400px; position: relative;">
+      <canvas id="portfolioChart"></canvas>
+    </div>
+  </div>
+
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <div class="formula-bar"><strong>Cash flow formula:</strong> &nbsp; Gross spend (inflation-adj) &nbsp;+&nbsp; Tax bill (Fed + NY + NYC) &nbsp;−&nbsp; SS income &nbsp;=&nbsp; <strong>Total portfolio draw</strong></div>
+  <div class="note-bar"><strong>Tax rules:</strong> Taxable: 70% LTCG / 30% ordinary (NY &amp; NYC tax LTCG as ordinary) &nbsp;|&nbsp; Tax-deferred: 100% ordinary &nbsp;|&nbsp; Tax-free (Roth/HSA): no tax &nbsp;|&nbsp; HK: excluded from US income &nbsp;|&nbsp; SS: 85% inclusion</div>
+
+  <div class="legend-row">
+    <span class="leg"><span class="leg-box" style="background:#EFF6FF;border:1px solid #93C5FD"></span>Retirement start</span>
+    <span class="leg"><span class="leg-box" style="background:#FEF3C7;border:1px solid #FCD34D"></span>Tax-deferred draws begin</span>
+    <span class="leg"><span class="leg-box" style="background:#DCFCE7;border:1px solid #86EFAC"></span>Tax-free / SS begins</span>
+    <span class="leg"><span class="leg-box" style="background:#FFFBEB;border:1px solid #FCD34D"></span>Portfolio &lt; 10x spend</span>
+    <span class="leg"><span class="leg-box" style="background:#FEF2F2;border:1px solid #FCA5A5"></span>Portfolio &lt; 5x spend</span>
+    <span class="leg"><span class="leg-box" style="background:#fef2f2;border-left:4px solid #ef4444"></span>Shortfall (portfolio depleted)</span>
+    <span class="leg"><span class="pill pill-blue">Taxable</span><span class="pill pill-amber">Tax-def</span><span class="pill pill-green">Tax-free</span><span class="pill pill-gray">HK</span> withdrawal sources</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="grp-hdr"></th>
+          <th class="grp-hdr" colspan="6" style="color:#1d4ed8">Account balances (end of year)</th>
+          <th class="grp-hdr" colspan="3" style="color:#92400e">Annual cash flow</th>
+          <th class="grp-hdr" colspan="6" style="color:#991b1b">Taxes paid</th>
+          <th class="grp-hdr" style="color:#374151">Withdrawn from</th>
+        </tr>
+        <tr>
+          <th style="width:34px;text-align:left">Age</th>
+          <th style="width:68px">Taxable</th>
+          <th style="width:68px">Tax-def</th>
+          <th style="width:68px">RMD</th>
+          <th style="width:68px">Tax-free</th>
+          <th style="width:56px">HK</th>
+          <th style="width:72px">Total</th>
+          <th style="width:66px">Gross spend</th>
+          <th style="width:56px">SS offset</th>
+          <th style="width:68px">Total draw ▲</th>
+          <th style="width:52px">Fed</th>
+          <th style="width:52px">NY St</th>
+          <th style="width:60px">NYC</th>
+          <th style="width:60px">NIIT</th>
+          <th style="width:65px" title="Medicare IRMAA Part B and Part D premium surcharge based on 2-year lookback MAGI">Med IRMAA</th>
+          <th style="width:60px">Tax bill</th>
+          <th style="width:148px">Sources</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let portfolioChart = null;
+const fC = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
+const fK = n => fC(n);
+const fM = n => fC(n);
+const fP = n => n.toFixed(1)+'%';
+
+function calcFedTax(ord, ltcg) {
+    const filingStatus = document.getElementById('filing-status') ? document.getElementById('filing-status').value : 'single';
+    const std = (filingStatus === 'mfj') ? 29200 : 14600;
+    const taxableOrd = Math.max(0, ord - std);
+    
+    // Ordinary Brackets 2024
+    let ordBrackets;
+    if (filingStatus === 'mfj') {
+        ordBrackets = [
+            [23200, 0.10],
+            [94300, 0.12],
+            [201050, 0.22],
+            [383900, 0.24],
+            [487450, 0.32],
+            [731200, 0.35],
+            [Infinity, 0.37]
+        ];
+    } else if (filingStatus === 'mfs') {
+        ordBrackets = [
+            [11600, 0.10],
+            [47150, 0.12],
+            [100525, 0.22],
+            [191950, 0.24],
+            [243725, 0.32],
+            [365600, 0.35],
+            [Infinity, 0.37]
+        ];
+    } else { // single
+        ordBrackets = [
+            [11600, 0.10],
+            [47150, 0.12],
+            [100525, 0.22],
+            [191950, 0.24],
+            [243725, 0.32],
+            [609350, 0.35],
+            [Infinity, 0.37]
+        ];
+    }
+    
+    let ordTax = 0;
+    let remainingOrd = taxableOrd;
+    let prevLimit = 0;
+    for (const [limit, rate] of ordBrackets) {
+        const amount = Math.min(remainingOrd, limit - prevLimit);
+        if (amount <= 0) break;
+        ordTax += amount * rate;
+        remainingOrd -= amount;
+        prevLimit = limit;
+    }
+    
+    // LTCG Brackets 2024
+    let ltcgTax = 0;
+    let currentTaxableIncome = taxableOrd;
+    let remainingLtcg = ltcg;
+    
+    let zeroLimit = 47025;
+    let fifteenLimit = 518900;
+    
+    if (filingStatus === 'mfj') {
+        zeroLimit = 94050;
+        fifteenLimit = 583750;
+    } else if (filingStatus === 'mfs') {
+        zeroLimit = 47025;
+        fifteenLimit = 291850;
+    }
+    
+    const cap0 = Math.max(0, zeroLimit - currentTaxableIncome);
+    const ltcgIn0 = Math.min(remainingLtcg, cap0);
+    remainingLtcg -= ltcgIn0;
+    currentTaxableIncome += ltcgIn0;
+    
+    const cap15 = Math.max(0, fifteenLimit - currentTaxableIncome);
+    const ltcgIn15 = Math.min(remainingLtcg, cap15);
+    ltcgTax += ltcgIn15 * 0.15;
+    remainingLtcg -= ltcgIn15;
+    currentTaxableIncome += ltcgIn15;
+    
+    ltcgTax += remainingLtcg * 0.20;
+    
+    return ordTax + ltcgTax;
+}
+
+function calcNIIT(ord, ltcg) {
+    const filingStatus = document.getElementById('filing-status') ? document.getElementById('filing-status').value : 'single';
+    const threshold = (filingStatus === 'mfj') ? 250000 : (filingStatus === 'mfs' ? 125000 : 200000);
+    const magi = ord + ltcg;
+    const excess = Math.max(0, magi - threshold);
+    return Math.min(ltcg, excess) * 0.038;
+}
+
+function calcNYTax(ord,ltcg){
+  const filingStatus = document.getElementById('filing-status') ? document.getElementById('filing-status').value : 'single';
+  const deduction = (filingStatus === 'mfj') ? 16050 : 8000;
+  const t=Math.max(0,(ord+ltcg)-deduction);
+  return{nyState:t*0.0685,nyCity:t*0.03876};
+}
+
+function calcIRMAA(magi, filingStatus) {
+  let multiplier = 1;
+  if (filingStatus === 'mfj') {
+    multiplier = 2;
+  }
+  
+  if (filingStatus === 'mfj') {
+    if (magi <= 206000) return 0;
+    if (magi <= 258000) return 993.60 * multiplier;
+    if (magi <= 322000) return 2496.00 * multiplier;
+    if (magi <= 386000) return 3999.60 * multiplier;
+    if (magi <= 750000) return 5502.00 * multiplier;
+    return 6003.60 * multiplier;
+  } else if (filingStatus === 'mfs') {
+    if (magi <= 103000) return 0;
+    if (magi <= 397000) return 5502.00 * multiplier;
+    return 6003.60 * multiplier;
+  } else {
+    if (magi <= 103000) return 0;
+    if (magi <= 129000) return 993.60 * multiplier;
+    if (magi <= 161000) return 2496.00 * multiplier;
+    if (magi <= 193000) return 3999.60 * multiplier;
+    if (magi <= 500000) return 5502.00 * multiplier;
+    return 6003.60 * multiplier;
+  }
+}
+
+
+function makePills(dT,dTd,dTf,dHk,pctT,pctTd,pctTf,pctHk){
+  const p=[];
+  if(dT>0) p.push(`<span class="pill pill-blue">Taxable ${fK(dT)} (${fP(pctT)})</span>`);
+  if(dTd>0) p.push(`<span class="pill pill-amber">Tax-Def ${fK(dTd)} (${fP(pctTd)})</span>`);
+  if(dTf>0) p.push(`<span class="pill pill-green">Tax-Free ${fK(dTf)} (${fP(pctTf)})</span>`);
+  if(dHk>0) p.push(`<span class="pill pill-gray">HK ${fK(dHk)} (${fP(pctHk)})</span>`);
+  return p.join('<br>');
+}
+
+// ── Synchronization Helpers ────────────────────────────────────────────────
+
+const formatComma = v => {
+  if (v === '' || v === null || v === undefined) return '';
+  const n = parseFloat(v.toString().replace(/,/g, ''));
+  return isNaN(n) ? '' : n.toLocaleString();
+};
+
+const unformatComma = v => {
+  return parseFloat(v.toString().replace(/,/g, '')) || 0;
+};
+
+function setupSync(id) {
+  const range = document.getElementById(id);
+  const num = document.getElementById(id + '-n');
+  if (!range || !num) return;
+
+  // Update summary span (optional, keeping for backward compatibility if hidden)
+  const updateDisplay = (val) => {
+    const disp = document.getElementById(id + '-v');
+    if (disp) {
+      let v = parseFloat(val);
+      let text = val;
+      if (id === 'ss-ben' || id === 'exp-base' || id.startsWith('init-')) {
+        text = '$' + Math.round(v).toLocaleString();
+      } else if (id.startsWith('g-') || id.startsWith('wd-') || id === 'infl' || id === 'post-ret' || id === 'cg-pct' || id === 'ord-pct') {
+        text = v.toFixed(1) + '%';
+      }
+      disp.textContent = text;
+    }
+  };
+
+  range.addEventListener('input', () => {
+    let val = parseFloat(range.value);
+    if (id === 'ord-pct') {
+      const cgVal = parseFloat(document.getElementById('cg-pct').value);
+      if (val > 100 - cgVal) {
+        val = 100 - cgVal;
+        range.value = val;
+      }
+    } else if (id === 'cg-pct') {
+      const ordElem = document.getElementById('ord-pct');
+      const ordVal = parseFloat(ordElem.value);
+      if (val + ordVal > 100) {
+        const newOrd = 100 - val;
+        ordElem.value = newOrd;
+        document.getElementById('ord-pct-n').value = newOrd;
+        const ordDisp = document.getElementById('ord-pct-v');
+        if (ordDisp) ordDisp.textContent = newOrd.toFixed(1) + '%';
+      }
+    }
+    num.value = num.classList.contains('is-currency') ? formatComma(range.value) : range.value;
+    updateDisplay(range.value);
+    run();
+  });
+
+  num.addEventListener('input', () => {
+    let raw = parseFloat(unformatComma(num.value));
+    if (isNaN(raw)) raw = 0;
+    
+    if (id === 'ord-pct') {
+      const cgVal = parseFloat(document.getElementById('cg-pct').value);
+      if (raw > 100 - cgVal) {
+        raw = 100 - cgVal;
+        num.value = raw;
+      }
+    } else if (id === 'cg-pct') {
+      const ordElem = document.getElementById('ord-pct');
+      const ordVal = parseFloat(ordElem.value);
+      if (raw + ordVal > 100) {
+        const newOrd = 100 - raw;
+        ordElem.value = newOrd;
+        document.getElementById('ord-pct-n').value = newOrd;
+        const ordDisp = document.getElementById('ord-pct-v');
+        if (ordDisp) ordDisp.textContent = newOrd.toFixed(1) + '%';
+      }
+    }
+    
+    range.value = raw;
+    updateDisplay(raw);
+    run();
+  });
+
+  if (num.classList.contains('is-currency')) {
+    num.addEventListener('blur', () => {
+      num.value = formatComma(range.value);
+    });
+  }
+}
+
+// Initialize sync for all sliders
+document.querySelectorAll('input[type=range]').forEach(input => {
+  setupSync(input.id);
+});
+
+// IRS SEPP & One-Time Draws Interactive Binding Setup
+(function setupEarlyDraws() {
+  const seppEnable = document.getElementById('sepp-enable');
+  const seppWrapper = document.getElementById('sepp-inputs-wrapper');
+  const othCount = document.getElementById('oth-count');
+  const othWrapper = document.getElementById('oth-rows-wrapper');
+
+  // SEPP inputs
+  const seppStartAge = document.getElementById('sepp-start-age');
+  const seppMethod = document.getElementById('sepp-method');
+  const seppRate = document.getElementById('sepp-rate');
+
+  if (seppEnable) {
+    seppEnable.addEventListener('change', () => {
+      if (seppEnable.checked) {
+        seppWrapper.classList.remove('opacity-50');
+        seppWrapper.style.pointerEvents = 'auto';
+      } else {
+        seppWrapper.classList.add('opacity-50');
+        seppWrapper.style.pointerEvents = 'none';
+      }
+      run();
+    });
+  }
+
+  [seppStartAge, seppMethod, seppRate].forEach(elem => {
+    if(elem) elem.addEventListener('input', run);
+  });
+
+  // One-Time Custom Draws dynamically generated elements manager
+  if (othCount && othWrapper) {
+    const syncDynamicRows = () => {
+      const targetCount = Math.max(0, Math.min(5, parseInt(othCount.value) || 0));
+      othCount.value = targetCount; // sanitise input bounds
+
+      const currentRows = othWrapper.querySelectorAll('.oth-row-item');
+      const currentCount = currentRows.length;
+
+      if (targetCount === currentCount) return;
+
+      if (targetCount < currentCount) {
+        // Remove excess rows
+        for (let i = currentCount - 1; i >= targetCount; i--) {
+          currentRows[i].remove();
+        }
+      } else {
+        // Add missing rows
+        for (let i = currentCount; i < targetCount; i++) {
+          const row = document.createElement('div');
+          row.className = 'oth-row-item flex items-center gap-2 bg-gray-800 p-2 rounded border border-gray-700 mt-1';
+          row.innerHTML = `
+            <div class="w-1/3">
+              <label class="block text-[10px] text-gray-400 mb-[2px]">Item Label</label>
+              <input type="text" class="oth-label text-xs w-full px-1 py-[2px] rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="e.g. Tesla M${i+1}">
+            </div>
+            <div class="w-1/4">
+              <label class="block text-[10px] text-gray-400 mb-[2px]">Age (Real)</label>
+              <input type="number" class="oth-age text-xs w-full px-1 py-[2px] rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500" min="40" max="100" value="${50 + i * 2}">
+            </div>
+            <div class="w-5/12">
+              <label class="block text-[10px] text-gray-400 mb-[2px]">Amount ($ Today)</label>
+              <input type="text" class="oth-amount text-xs w-full px-1 py-[2px] rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500" value="${(50000 * (i + 1)).toLocaleString()}">
+            </div>
+          `;
+
+          // Bind listeners to dynamic inputs
+          const ageInput = row.querySelector('.oth-age');
+          const amtInput = row.querySelector('.oth-amount');
+          const lblInput = row.querySelector('.oth-label');
+
+          amtInput.addEventListener('input', () => {
+            // format comma key stroke helper
+            let clean = amtInput.value.replace(/[^0-9.]/g, '');
+            const parsed = parseFloat(clean) || 0;
+            const cursor = amtInput.selectionStart;
+            const originalLength = amtInput.value.length;
+            
+            if (clean.includes('.')) {
+              const parts = clean.split('.');
+              amtInput.value = parseInt(parts[0]).toLocaleString() + '.' + parts[1].substring(0, 2);
+            } else {
+              amtInput.value = Math.round(parsed).toLocaleString();
+            }
+            
+            // Adjust cursor smoothly
+            const newLength = amtInput.value.length;
+            amtInput.selectionEnd = cursor + (newLength - originalLength);
+            run();
+          });
+
+          [ageInput, lblInput].forEach(inp => inp.addEventListener('input', run));
+          othWrapper.appendChild(row);
+        }
+      }
+      run();
+    };
+
+    othCount.addEventListener('input', syncDynamicRows);
+    othCount.addEventListener('change', syncDynamicRows);
+  }
+  
+  // Recalculate on change of tax filing status, withdrawal order options or deplete checkboxes
+  const fsSelect = document.getElementById('filing-status');
+  const woSelect = document.getElementById('wd-order');
+  const wdCheck = document.getElementById('wd-deplete');
+  [fsSelect, woSelect, wdCheck].forEach(elem => {
+    if (elem) elem.addEventListener('change', run);
+  });
+})();
+
+function run(){
+  const cAge=+document.getElementById('c-age').value;
+  const rAge=+document.getElementById('r-age').value;
+  const pAge=+document.getElementById('p-age').value;
+  const ssAnnual=+document.getElementById('ss-ben').value*12;
+  const expBase=+document.getElementById('exp-base').value;
+  const infl=+document.getElementById('infl').value/100;
+  const postRet=+document.getElementById('post-ret').value/100;
+  const gTax=+document.getElementById('g-tax').value/100;
+  const gTd=+document.getElementById('g-td').value/100;
+  const gTf=+document.getElementById('g-tf').value/100;
+  const gHk=+document.getElementById('g-hk').value/100;
+  const wdT=+document.getElementById('wd-taxable').value/100;
+  const wdTd=+document.getElementById('wd-td').value/100;
+  const wdTd65=+document.getElementById('wd-td-65').value/100;
+  const wdTf=+document.getElementById('wd-tf').value/100;
+  const wdHk=+document.getElementById('wd-hk').value/100;
+  const wdTdAge=+document.getElementById('wd-td-age').value;
+  const wdTfAge=+document.getElementById('wd-tf-age').value;
+  const wdOrder = document.getElementById('wd-order').value.split(',');
+  const wdDeplete = document.getElementById('wd-deplete').checked;
+  const cgPct=+document.getElementById('cg-pct').value/100;
+  const ordPct=+document.getElementById('ord-pct').value/100;
+  const tdOrd=1.0;
+
+  // Parse dynamic/SEPP inputs
+  const seppEnabled = document.getElementById('sepp-enable').checked;
+  const seppStartAge = document.getElementById('sepp-start-age') ? +document.getElementById('sepp-start-age').value : 55;
+  const seppMethod = document.getElementById('sepp-method') ? document.getElementById('sepp-method').value : 'rmd';
+  const seppRate = document.getElementById('sepp-rate') ? parseFloat(document.getElementById('sepp-rate').value) / 100 : 0.04;
+
+  const othExpenses = [];
+  const dynamicRows = document.getElementById('oth-rows-wrapper') ? document.getElementById('oth-rows-wrapper').querySelectorAll('.oth-row-item') : [];
+  dynamicRows.forEach(row => {
+    const ageInput = row.querySelector('.oth-age');
+    const amtInput = row.querySelector('.oth-amount');
+    const lblInput = row.querySelector('.oth-label');
+    if (ageInput && amtInput) {
+      const age = +ageInput.value || 0;
+      const cleanAmt = amtInput.value.replace(/[^0-9.]/g, '');
+      const amount = parseFloat(cleanAmt) || 0;
+      const label = lblInput ? (lblInput.value.trim() || 'Expense Item') : 'Expense Item';
+      othExpenses.push({ age, amount, label });
+    }
+  });
+  let taxable=+document.getElementById('init-taxable').value;
+  let taxDef=+document.getElementById('init-td').value;
+  let taxFree=+document.getElementById('init-tf').value;
+  let hk=+document.getElementById('init-hk').value;
+
+  const rmdTable = {72:27.4, 73:26.5, 74:25.5, 75:24.6, 76:23.7, 77:22.9, 78:22.0, 79:21.1, 80:20.2, 81:19.4, 82:18.5, 83:17.7, 84:16.8, 85:16.0, 86:15.2, 87:14.4, 88:13.7, 89:12.9, 90:12.2, 91:11.5, 92:10.8, 93:10.1, 94:9.5, 95:8.9, 96:8.4, 97:7.8, 98:7.3, 99:6.8, 100:6.4};
+  const rmdStartAge = 73;
+
+  const rows=[];let depleted=false;
+  let seppAnnualAmt = 0;
+  let seppCalculated = false;
+
+  function getSingleLifeExpectancy(a) {
+    const sleTable = {
+      50:36.2, 51:35.3, 52:34.3, 53:33.4, 54:32.5, 55:31.6, 56:30.6, 57:29.8, 58:28.9, 59:28.0,
+      60:27.1, 61:26.2, 62:25.4, 63:24.5, 64:23.7, 65:22.9, 66:22.0, 67:21.2, 68:20.4, 69:19.6,
+      70:18.8, 71:18.0, 72:17.2, 73:16.4, 74:15.6, 75:14.8
+    };
+    if (a < 50) return 36.2 + (50 - a);
+    if (a > 75) return 14.8;
+    return sleTable[Math.floor(a)] || 30;
+  }
+
+  for(let age=cAge;age<=pAge;age++){
+    const isRet=age>=rAge,hasSS=age>=65;
+    const ss=hasSS?ssAnnual:0;
+    
+    // 1. Determine if SEPP is active this year (72(t) rules: 5 years or until age 59.5, whichever is longer)
+    const isSeppActive = seppEnabled && isRet && (age >= seppStartAge) && (age < Math.max(seppStartAge + 5, 60));
+
+    // 2. Parse any Dynamic One-Time Expenses for this age
+    let oneTimeSpend = 0;
+    let oneTimeLabels = [];
+    othExpenses.forEach(exp => {
+      if (exp.age === age) {
+        const inflatedAmt = exp.amount * Math.pow(1 + infl, age - cAge);
+        oneTimeSpend += inflatedAmt;
+        oneTimeLabels.push(`${exp.label} (${fK(inflatedAmt)})`);
+      }
+    });
+
+    const gs=isRet?expBase*Math.pow(1+infl,age-rAge) + oneTimeSpend : 0;
+    const rmd = (age >= rmdStartAge && rmdTable[age]) ? (taxDef / rmdTable[age]) : 0;
+
+    // 3. Compute dynamic or fixed SEPP payout if active
+    if (isSeppActive) {
+      if (seppMethod === 'rmd') {
+        seppAnnualAmt = taxDef / getSingleLifeExpectancy(age);
+      } else if (!seppCalculated) {
+        const n = getSingleLifeExpectancy(age);
+        const rate = seppRate;
+        if (seppMethod === 'amort') {
+          const annuityFactor = (rate > 0) ? ((1 - Math.pow(1 + rate, -n)) / rate) : n;
+          seppAnnualAmt = taxDef / annuityFactor;
+        } else if (seppMethod === 'annuit') {
+          const annuityFactor = 1.05 * ((rate > 0) ? ((1 - Math.pow(1 + rate, -n)) / rate) : n);
+          seppAnnualAmt = taxDef / annuityFactor;
+        }
+        seppCalculated = true; // fix the payment for amort/annuit methods
+      }
+    }
+
+    if(!isRet){
+      // For pre-retirement years, if there are any one-time expenses, we must draw them!
+      let pT = 0, pTd = 0, pTf = 0, pHk = 0, penalty = 0;
+      let totalDraw = 0;
+      let totalNeeded = oneTimeSpend;
+      
+      if (totalNeeded > 0) {
+        // sequential draw just for pre-retirement expenses (taxable first, etc.)
+        if (taxable > 0) {
+          pT = Math.min(taxable, totalNeeded);
+          totalNeeded -= pT;
+          totalDraw += pT;
+        }
+        if (totalNeeded > 0 && age >= wdTdAge && taxDef > 0) {
+          pTd = Math.min(taxDef, totalNeeded / 0.75); // est rate
+          totalNeeded -= pTd * 0.75;
+          totalDraw += pTd;
+          if (age < 59.5) penalty = pTd * 0.10;
+        }
+        if (totalNeeded > 0 && age >= wdTfAge && taxFree > 0) {
+          pTf = Math.min(taxFree, totalNeeded);
+          totalNeeded -= pTf;
+          totalDraw += pTf;
+        }
+      }
+      
+      const prevTaxable = taxable;
+      const prevTaxDef = taxDef;
+      const prevTaxFree = taxFree;
+      const prevHk = hk;
+
+      taxable = Math.max(0, prevTaxable - pT) * (1 + gTax);
+      taxDef = Math.max(0, prevTaxDef - pTd) * (1 + gTd);
+      taxFree = Math.max(0, prevTaxFree - pTf) * (1 + gTf);
+      hk = hk * (1 + gHk);
+
+      const isShortfall = totalNeeded > 1.0;
+      const preRetOrdinary = pT * ordPct + pTd * 1.0;
+      const preRetLtcg = pT * cgPct;
+      const preRetMagi = preRetOrdinary + preRetLtcg;
+
+      rows.push({
+        age, taxable, taxDef, rmd, taxFree, hk,
+        total: taxable + taxDef + taxFree + hk,
+        gs: oneTimeSpend, ss: 0, taxBill: penalty, totalDraw,
+        fed: penalty, nys: 0, nyc: 0, niit: 0, penalty, irmaa: 0,
+        dT: pT, dTd: pTd, dTf: pTf, dHk: pHk,
+        pctT: prevTaxable > 0 ? (pT/prevTaxable)*100 : 0,
+        pctTd: prevTaxDef > 0 ? (pTd/prevTaxDef)*100 : 0,
+        pctTf: prevTaxFree > 0 ? (pTf/prevTaxFree)*100 : 0,
+        pctHk: 0, isRet: false, isSeppActive, oneTimeSpend, oneTimeLabels, isShortfall,
+        magi: preRetMagi
+      });
+    } else {
+      const startTaxable = taxable;
+      const startTaxDef = taxDef;
+      const startTaxFree = taxFree;
+      const startHk = hk;
+
+      // Calculate baseline withdrawals based on user settings
+      let pT = (taxable > 0) ? taxable * wdT : 0;
+      let currentWdTd = 0;
+      if (age >= wdTdAge) {
+        if (age < 65) {
+          currentWdTd = wdTd;
+        } else if (age < rmdStartAge) {
+          currentWdTd = wdTd65;
+        }
+      }
+      let pTd = (taxDef > 0) ? Math.max(taxDef * currentWdTd, rmd) : 0;
+      
+      // Apply minimum SEPP floor on pre-tax draws if active
+      if (isSeppActive && taxDef > 0) {
+        pTd = Math.max(pTd, Math.min(taxDef, seppAnnualAmt));
+      }
+
+      let pTf = (taxFree > 0) ? taxFree * (age >= wdTfAge ? wdTf : 0) : 0;
+      let pHk = (hk > 0) ? hk * wdHk : 0;
+
+      // Calculate ordinary and ltcg taxes + the pre-59.5 early penalty on excess draws
+      let ord = pT * ordPct + pTd * tdOrd + ss * 0.85;
+      let ltcg = pT * cgPct;
+      let fed = calcFedTax(ord, ltcg);
+      
+      // Penalty assessed on components of PRE-TAX drawn pre-59.5 that are NOT SEPP-exempt
+      let nonSeppTd = pTd;
+      if (isSeppActive) {
+        nonSeppTd = Math.max(0, pTd - seppAnnualAmt);
+      }
+      let penalty = (age < 59.5) ? nonSeppTd * 0.10 : 0;
+      
+      let { nyState: nys, nyCity: nyc } = calcNYTax(ord, ltcg);
+      let niit = calcNIIT(ord, ltcg);
+
+      const filingStatus = document.getElementById('filing-status') ? document.getElementById('filing-status').value : 'single';
+      let irmaa = 0;
+      if (age >= 65) {
+        const lookbackRow = rows.find(r => r.age === age - 2);
+        if (lookbackRow) {
+          irmaa = calcIRMAA(lookbackRow.magi, filingStatus);
+        } else {
+          irmaa = calcIRMAA(ord + ltcg, filingStatus);
+        }
+      }
+      
+      let taxBill = fed + nys + nyc + niit + penalty + irmaa;
+
+      let totalDraw = pT + pTd + pTf + pHk;
+      let totalNeeded = gs + taxBill - ss;
+      let gap = totalNeeded - totalDraw;
+
+      let fallbackDrawn = false;
+      if (gap > 1) {
+        if (wdDeplete) {
+          // Sequential Depletion based on specified order
+          // 1. Emergency fallback on Taxable Brokerage first
+          if (taxable > pT) {
+            let iterations = 0;
+            while (gap > 1 && taxable > pT && iterations < 12) {
+              let ordPctToday = ordPct > 0 ? ordPct : 1.0;
+              let cgPctToday = cgPct > 0 ? cgPct : 0.0;
+              let baseIncomeForTaxable = Math.max(ord, 50000);
+              let nyTaxes = calcNYTax(baseIncomeForTaxable, 0);
+              let estTaxForTaxable = calcFedTax(baseIncomeForTaxable, 0) + calcNIIT(baseIncomeForTaxable, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+              let calculatedOrdRate = Math.min(0.50, Math.max(0.10, estTaxForTaxable / baseIncomeForTaxable));
+              let estRate = (ordPctToday * calculatedOrdRate) + (cgPctToday * (0.15 + (nyTaxes.nyState + nyTaxes.nyCity) / baseIncomeForTaxable));
+              
+              let extra = gap / (1 - estRate);
+              extra = Math.min(extra, taxable - pT);
+              if (extra < 0.01) break;
+              pT += extra;
+              totalDraw += extra;
+              fallbackDrawn = true;
+              
+              ord = pT * ordPct + pTd * tdOrd + ss * 0.85;
+              ltcg = pT * cgPct;
+              fed = calcFedTax(ord, ltcg);
+              
+              nonSeppTd = pTd;
+              if (isSeppActive) nonSeppTd = Math.max(0, pTd - seppAnnualAmt);
+              penalty = (age < 59.5) ? nonSeppTd * 0.10 : 0;
+
+              ({ nyState: nys, nyCity: nyc } = calcNYTax(ord, ltcg));
+              niit = calcNIIT(ord, ltcg);
+              taxBill = fed + nys + nyc + niit + penalty + irmaa;
+              totalNeeded = gs + taxBill - ss;
+              gap = totalNeeded - totalDraw;
+              iterations++;
+            }
+          }
+
+          // 2. Double-Pass Sequential Emergency Draw across defined wdOrder
+          for (let pass = 1; pass <= 2; pass++) {
+            if (gap <= 1) break;
+            for (let type of wdOrder) {
+              if (gap <= 1) break;
+              
+              if (type === 'td' && taxDef > pTd) {
+                // Pass 1: honors standard age limit; Pass 2: bypasses age limit to survive shortfall
+                if (pass === 1 && age < wdTdAge) continue;
+                
+                let iterations = 0;
+                while (gap > 1 && taxDef > pTd && iterations < 12) {
+                  let baseIncome = Math.max(ord, 50000);
+                  let nyTaxes = calcNYTax(baseIncome, 0);
+                  let estTax = calcFedTax(baseIncome, 0) + calcNIIT(baseIncome, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+                  let estRate = Math.min(0.50, Math.max(0.10, estTax / baseIncome));
+                  if (age < 59.5 && !isSeppActive) estRate += 0.10; // penalize early pre-tax fallback
+                  
+                  let extra = gap / (1 - estRate);
+                  extra = Math.min(extra, taxDef - pTd);
+                  if (extra < 0.01) break;
+                  pTd += extra;
+                  totalDraw += extra;
+                  fallbackDrawn = true;
+                  
+                  ord = pT * ordPct + pTd * tdOrd + ss * 0.85;
+                  ltcg = pT * cgPct;
+                  fed = calcFedTax(ord, ltcg);
+                  
+                  nonSeppTd = pTd;
+                  if (isSeppActive) nonSeppTd = Math.max(0, pTd - seppAnnualAmt);
+                  penalty = (age < 59.5) ? nonSeppTd * 0.10 : 0;
+
+                  ({ nyState: nys, nyCity: nyc } = calcNYTax(ord, ltcg));
+                  niit = calcNIIT(ord, ltcg);
+                  taxBill = fed + nys + nyc + niit + penalty + irmaa;
+                  totalNeeded = gs + taxBill - ss;
+                  gap = totalNeeded - totalDraw;
+                  iterations++;
+                }
+              } else if (type === 'tf' && taxFree > pTf) {
+                // Pass 1: respects Roth start age limit; Pass 2: bypasses limit
+                if (pass === 1 && age < wdTfAge) continue;
+                
+                let extra = Math.min(gap, taxFree - pTf);
+                pTf += extra;
+                totalDraw += extra;
+                gap -= extra;
+                fallbackDrawn = true;
+              } else if (type === 'hk' && hk > pHk) {
+                // Home equity draw acts as emergency buffer anytime during retire
+                let extra = Math.min(gap, hk - pHk);
+                pHk += extra;
+                totalDraw += extra;
+                gap -= extra;
+                fallbackDrawn = true;
+              }
+            }
+          }
+        } else {
+          // Double-Pass Proportional Emergency Draw
+          for (let pass = 1; pass <= 2; pass++) {
+            if (gap <= 1) break;
+            let iterations = 0;
+            while (gap > 1 && iterations < 12) {
+              let remainingAccounts = [];
+              
+              if (taxable > pT) {
+                let tRate = 0;
+                let baseIncomeForTaxable = Math.max(ord, 50000);
+                let nyTaxes = calcNYTax(baseIncomeForTaxable, 0);
+                let estTaxForTaxable = calcFedTax(baseIncomeForTaxable, 0) + calcNIIT(baseIncomeForTaxable, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+                tRate = Math.min(0.50, Math.max(0.10, estTaxForTaxable / baseIncomeForTaxable));
+                remainingAccounts.push({type:'t', bal: taxable - pT, rate: tRate});
+              }
+              
+              if (taxDef > pTd) {
+                if (pass === 1 && age < wdTdAge) {
+                  // Skip pre-tax in standard pass 1 if age not met
+                } else {
+                  let baseIncome = Math.max(ord, 50000);
+                  let nyTaxes = calcNYTax(baseIncome, 0);
+                  let estTax = calcFedTax(baseIncome, 0) + calcNIIT(baseIncome, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+                  let tdRate = Math.min(0.50, Math.max(0.10, estTax / baseIncome));
+                  if (age < 59.5 && !isSeppActive) tdRate += 0.10;
+                  remainingAccounts.push({type:'td', bal: taxDef - pTd, rate: tdRate});
+                }
+              }
+              
+              if (taxFree > pTf) {
+                if (pass === 1 && age < wdTfAge) {
+                  // Skip roth in standard pass 1 if age not met
+                } else {
+                  remainingAccounts.push({type:'tf', bal: taxFree - pTf, rate: 0});
+                }
+              }
+              
+              if (hk > pHk) {
+                remainingAccounts.push({type:'hk', bal: hk - pHk, rate: 0});
+              }
+
+              let totalBal = remainingAccounts.reduce((a, b) => a + b.bal, 0);
+              if (totalBal <= 0) break;
+
+              let currentGap = gap;
+              let extraDrawn = 0;
+              
+              remainingAccounts.forEach(acc => {
+                let prop = acc.bal / totalBal;
+                let needed = currentGap * prop;
+                let draw = needed / (1 - acc.rate);
+                draw = Math.min(draw, acc.bal);
+                if (acc.type === 't') pT += draw;
+                else if (acc.type === 'td') pTd += draw;
+                else if (acc.type === 'tf') pTf += draw;
+                else if (acc.type === 'hk') pHk += draw;
+                totalDraw += draw;
+                extraDrawn += draw;
+                fallbackDrawn = true;
+              });
+
+              if (extraDrawn < 1) break;
+
+              ord = pT * ordPct + pTd * tdOrd + ss * 0.85;
+              ltcg = pT * cgPct;
+              fed = calcFedTax(ord, ltcg);
+              
+              nonSeppTd = pTd;
+              if (isSeppActive) nonSeppTd = Math.max(0, pTd - seppAnnualAmt);
+              penalty = (age < 59.5) ? nonSeppTd * 0.10 : 0;
+
+              ({ nyState: nys, nyCity: nyc } = calcNYTax(ord, ltcg));
+              niit = calcNIIT(ord, ltcg);
+              taxBill = fed + nys + nyc + niit + penalty + irmaa;
+              totalNeeded = gs + taxBill - ss;
+              gap = totalNeeded - totalDraw;
+              iterations++;
+            }
+          }
+        }
+      }
+
+      let leftoverDraw = 0;
+      if (totalDraw > totalNeeded) {
+        leftoverDraw = totalDraw - totalNeeded;
+      }
+
+      let isShortfall = (totalNeeded > totalDraw + 1);
+      let adviceList = [];
+      if (isShortfall) {
+        let gapDollar = totalNeeded - totalDraw;
+        
+        // Calculate other accounts drawing potential
+        let remTaxable = Math.max(0, startTaxable - pT);
+        let remTaxDef = Math.max(0, startTaxDef - pTd);
+        let remTaxFree = Math.max(0, startTaxFree - pTf);
+        let remHk = Math.max(0, startHk - pHk);
+        
+        // Define standard evaluation order: Taxable first if any remaining, then follow specified wdOrder
+        let evaluationOrder = ['t'];
+        if (wdOrder && wdOrder.length > 0) {
+          wdOrder.forEach(type => {
+            if (!evaluationOrder.includes(type)) {
+              evaluationOrder.push(type);
+            }
+          });
+        }
+        
+        // Evaluate fallbacks in withdrawal order priority
+        evaluationOrder.forEach(accType => {
+          if (gapDollar <= 0) return;
+          
+          if (accType === 't' && remTaxable > 0) {
+            let baseIncomeForTaxable = Math.max(totalNeeded, 50000);
+            let nyTaxes = calcNYTax(baseIncomeForTaxable, 0);
+            let estTaxForTaxable = calcFedTax(baseIncomeForTaxable, 0) + calcNIIT(baseIncomeForTaxable, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+            let calculatedOrdRate = Math.min(0.50, Math.max(0.10, estTaxForTaxable / baseIncomeForTaxable));
+            let estRate = (ordPct * calculatedOrdRate) + (cgPct * (0.15 + (nyTaxes.nyState + nyTaxes.nyCity) / baseIncomeForTaxable));
+            let grossNeeded = gapDollar / (1 - estRate);
+            if (isNaN(grossNeeded) || grossNeeded <= 0) grossNeeded = gapDollar;
+            
+            let grossDraw = Math.min(grossNeeded, remTaxable);
+            let netGained = grossDraw * (1 - estRate);
+            
+            adviceList.push({
+              source: "Taxable Brokerage",
+              gross: grossDraw,
+              net: netGained,
+              rate: estRate,
+              penalty: 0,
+              reason: "Taxable rate limit",
+              msg: `Draw ${fK(grossDraw)} from Taxable Brokerage to net ${fK(netGained)}.`
+            });
+            gapDollar -= netGained;
+          }
+          
+          if (accType === 'tf' && remTaxFree > 0) {
+            let drawAmt = Math.min(gapDollar, remTaxFree);
+            let recType = (age < wdTfAge) ? "Roth age limit" : "Roth rate limit";
+            adviceList.push({
+              source: "Tax-Free (Roth)",
+              gross: drawAmt,
+              net: drawAmt,
+              rate: 0,
+              penalty: 0,
+              reason: recType,
+              msg: `Withdraw ${fK(drawAmt)} (tax-free) from Tax-Free pool${age < wdTfAge ? ` by lowering starting age from ${wdTfAge} to ${age}` : ''}.`
+            });
+            gapDollar -= drawAmt;
+          }
+          
+          if (accType === 'hk' && remHk > 0) {
+            let drawAmt = Math.min(gapDollar, remHk);
+            adviceList.push({
+              source: "Home Equity (HK)",
+              gross: drawAmt,
+              net: drawAmt,
+              rate: 0,
+              penalty: 0,
+              reason: "HK rate limit",
+              msg: `Draw ${fK(drawAmt)} (tax-free) from Home Equity pool.`
+            });
+            gapDollar -= drawAmt;
+          }
+          
+          if (accType === 'td' && remTaxDef > 0) {
+            let baseIncomeForTd = Math.max(totalNeeded, 50000);
+            let nyTaxes = calcNYTax(baseIncomeForTd, 0);
+            let estTaxForTd = calcFedTax(baseIncomeForTd, 0) + calcNIIT(baseIncomeForTd, 0) + nyTaxes.nyState + nyTaxes.nyCity;
+            let estRate = Math.min(0.50, Math.max(0.10, estTaxForTd / baseIncomeForTd));
+            let preTaxPenalty = 0;
+            if (age < 59.5 && !isSeppActive) {
+              estRate += 0.10;
+              preTaxPenalty = 0.10;
+            }
+            
+            let grossNeeded = gapDollar / (1 - estRate);
+            if (isNaN(grossNeeded) || grossNeeded <= 0) grossNeeded = gapDollar;
+            
+            let grossDraw = Math.min(grossNeeded, remTaxDef);
+            let netGained = grossDraw * (1 - estRate);
+            
+            let recType = (age < wdTdAge) ? "Pre-Tax age limit" : "Pre-Tax rate limit";
+            let msgText = `Draw ${fK(grossDraw)} (gross) from Pre-Tax pool to net ${fK(netGained)}`;
+            if (age < wdTdAge) {
+              msgText += ` by lowering starting age from ${wdTdAge} to ${age}`;
+            }
+            if (age < 59.5 && !isSeppActive) {
+              msgText += ` (includes 10% early withdrawal penalty)`;
+            }
+            msgText += `.`;
+            
+            adviceList.push({
+              source: "Tax-Deferred (Pre-Tax)",
+              gross: grossDraw,
+              net: netGained,
+              rate: estRate - preTaxPenalty,
+              penalty: preTaxPenalty,
+              reason: recType,
+              msg: msgText
+            });
+            
+            // SEPP Enablement Suggestion for pre-59.5 early withdrawals
+            if (age < 59.5 && !seppEnabled) {
+              let penaltySaved = grossDraw * 0.10;
+              if (penaltySaved > 0) {
+                adviceList.push({
+                  source: "SEPP Advisor Alert",
+                  gross: 0,
+                  net: penaltySaved,
+                  rate: 0,
+                  penalty: 0,
+                  reason: "SEPP Penalty Avoidance",
+                  msg: `💡 Suggestion: Enable SEPP on Pre-Tax accounts to bypass early 10% penalties (saving approx $${fK(penaltySaved)}/yr on a $${fK(grossDraw)} pre-tax drawing).`
+                });
+              }
+            }
+            
+            gapDollar -= netGained;
+          }
+        });
+        
+        // 5. Spending fallback reduction or Init Assets present-value boosters
+        if (gapDollar > 1) {
+          adviceList.push({
+            source: "Baseline Expenses",
+            gross: gapDollar,
+            net: gapDollar,
+            rate: 0,
+            penalty: 0,
+            reason: "Depleted Portfolio",
+            msg: `Reduce retirement baseline spending by ${fK(gapDollar)}/yr.`
+          });
+          
+          let yearsToWait = Math.max(1, age - rAge);
+          let initAssetBoost = gapDollar / Math.pow(1 + postRet, yearsToWait);
+          
+          adviceList.push({
+            source: "Initial Assets Today",
+            gross: initAssetBoost,
+            net: gapDollar,
+            rate: 0,
+            penalty: 0,
+            reason: "Depleted Portfolio",
+            msg: `Increase Initial assets today by ${fK(initAssetBoost)} (grows at ${((postRet)*100).toFixed(1)}% for ${yearsToWait} yrs to satisfy ${fK(gapDollar)} gap at age ${age}).`
+          });
+        }
+        
+        // Medicare IRMAA Checks on drawings MAGI (evaluated on 2-year lookback age >= 63)
+        if (age >= 63) {
+          const filingStatus = document.getElementById('filing-status') ? document.getElementById('filing-status').value : 'single';
+          const irmaaThreshold = (filingStatus === 'mfj') ? 206000 : 103000;
+          const magiToday = ord + ltcg;
+          if (magiToday > irmaaThreshold) {
+            let label = "Single";
+            if (filingStatus === 'mfj') label = "Married Joint";
+            else if (filingStatus === 'mfs') label = "Married Separate";
+            
+            adviceList.push({
+              source: "Medicare IRMAA Alert",
+              gross: 0,
+              net: 0,
+              rate: 0,
+              penalty: 0,
+              reason: "IRMAA Bracket Surcharge Warning",
+              msg: `⚠️ Filter warning: Drawdown MAGI is $${fK(magiToday)}, exceeding the Medicare IRMAA surcharge tier limit of $${(irmaaThreshold/1000)}k (${label}). Surcharges will apply at age ${age + 2}.`
+            });
+          }
+        }
+      }
+
+      let pctT = startTaxable > 0 ? (pT / startTaxable) * 100 : 0;
+      let pctTd = startTaxDef > 0 ? (pTd / startTaxDef) * 100 : 0;
+      let pctTf = startTaxFree > 0 ? (pTf / startTaxFree) * 100 : 0;
+      let pctHk = startHk > 0 ? (pHk / startHk) * 100 : 0;
+
+      taxable = (Math.max(0, taxable - pT) + leftoverDraw) * (1 + postRet);
+      taxDef = Math.max(0, taxDef - pTd) * (1 + postRet);
+      taxFree = Math.max(0, taxFree - pTf) * (1 + postRet);
+      hk = Math.max(0, hk - pHk) * (1 + postRet);
+
+      const total = taxable + taxDef + taxFree + hk;
+      if (total <= 0) depleted = true;
+      rows.push({
+        age, taxable, taxDef, rmd, taxFree, hk, total, gs, ss, taxBill, totalDraw,
+        fed, nys, nyc, niit, penalty, irmaa, dT: pT, dTd: pTd, dTf: pTf, dHk: pHk,
+        pctT, pctTd, pctTf, pctHk, isRet: true, isShortfall, fallbackDrawn,
+        isSeppActive, oneTimeSpend, oneTimeLabels, shortfallSuggestions: adviceList,
+        magi: ord + ltcg
+      });
+    }
+  }
+  const retRow=rows.find(r=>r.age===rAge);
+  const endRow=rows[rows.length-1];
+  const retTotal=retRow?retRow.total:0;
+  const firstRet=rows.find(r=>r.isRet);
+  const wr=firstRet&&retTotal>0?firstRet.totalDraw/retTotal*100:0;
+  const wrc=wr<=3.5?'g':wr<=5?'a':'r';
+
+    const anyShortfall = rows.some(r => r.isShortfall);
+    document.getElementById('summary-grid').innerHTML=`
+    <div class="metric"><div class="metric-label">Portfolio today</div><div class="metric-value">${fM(+document.getElementById('init-taxable').value + +document.getElementById('init-td').value + +document.getElementById('init-tf').value + +document.getElementById('init-hk').value)}</div></div>
+    <div class="metric"><div class="metric-label">Portfolio at retirement (${rAge})</div><div class="metric-value">${fM(retTotal)}</div></div>
+    <div class="metric"><div class="metric-label">Initial withdrawal rate</div><div class="metric-value ${wrc}">${fP(wr)}</div></div>
+    <div class="metric"><div class="metric-label">SS annual income (65+)</div><div class="metric-value g">${fK(ssAnnual)}</div></div>
+    <div class="metric"><div class="metric-label">Tax-deferred draws start</div><div class="metric-value" style="color:#D97706">Age ${wdTdAge}</div></div>
+    <div class="metric"><div class="metric-label">Portfolio at age ${pAge}</div><div class="metric-value ${anyShortfall?'r':endRow.total>retTotal?'g':'a'}">${anyShortfall?'Shortfall':fM(endRow.total)}</div></div>
+  `;
+
+  document.getElementById('tbl-body').innerHTML=rows.map(r=>{
+    let rc='';
+    if(!r.isRet)rc='accum';
+    else if(r.age===rAge)rc='ret-start';
+    else if(r.age===65)rc='ss-start';
+    else if(r.age===wdTdAge)rc='td-start';
+    else if(r.age===wdTfAge)rc='tf-start';
+    if(r.isShortfall)rc+=' shortfall';
+    const d='—';
+    return`<tr class="${rc}">
+      <td>${r.age}</td>
+      <td ${r.isRet && r.taxable <= 0 ? 'class="depleted-cell"' : ''}>${fK(r.taxable)}</td>
+      <td ${r.isRet && r.taxDef <= 0 ? 'class="depleted-cell"' : ''}>${fK(r.taxDef)}</td>
+      <td style="color:#fbbf24;font-weight:500">${r.rmd>0?fK(r.rmd):d}</td>
+      <td ${r.isRet && r.taxFree <= 0 ? 'class="depleted-cell"' : ''}>${fK(r.taxFree)}</td>
+      <td ${r.isRet && r.hk <= 0 ? 'class="depleted-cell"' : ''}>${fK(r.hk)}</td>
+      <td><strong>${fM(r.total)}</strong></td>
+      <td>${r.gs>0?fK(r.gs):d}</td>
+      <td>${r.ss>0?'−'+fK(r.ss):d}</td>
+      <td>${r.totalDraw>0?fK(r.totalDraw):d}</td>
+      <td title="${r.totalDraw > 0 && r.fed > 0 ? `Effective rate: ${((r.fed / r.totalDraw) * 100).toFixed(1)}% of total draw` : ''}">${r.fed>0?fK(r.fed):d}</td>
+      <td>${r.nys>0?fK(r.nys):d}</td>
+      <td>${r.nyc>0?fK(r.nyc):d}</td>
+      <td>${r.niit>0?fK(r.niit):d}</td>
+      <td title="${r.age >= 65 ? `IRMAA premium surcharge based on MAGI 2 years ago (at age ${r.age - 2}): ${r.magi ? fK(r.magi) : '—'}` : 'IRMAA surcharges apply starting at Medicare age 65'}" ${r.irmaa > 0 ? 'style="color:#dc2626;font-weight:500;background:#fef2f2"' : ''}>${r.irmaa>0?'+'+fK(r.irmaa):d}</td>
+      <td>${r.taxBill>0?'+'+fK(r.taxBill):d}</td>
+      <td>${(() => {
+        let pills = makePills(r.dT, r.dTd, r.dTf, r.dHk, r.pctT, r.pctTd, r.pctTf, r.pctHk);
+        let extra = [];
+        if (r.isSeppActive) {
+          extra.push(`<span class="pill pill-cyan" title="IRS SEPP 72(t) penalty-free tax-deferred draw active">SEPP DRAW</span>`);
+        }
+        if (r.oneTimeSpend > 0) {
+          extra.push(`<span class="pill pill-purple" title="One-Time Expense Draws: ${r.oneTimeLabels.join(', ')}">+${fK(r.oneTimeSpend)} ITEM</span>`);
+        }
+        if (r.fallbackDrawn && !r.isShortfall) {
+          extra.push(`<span class="pill pill-blue" title="Fallback withdrawals bypass limits to satisfy desired spend">FALLBACK DRAW</span>`);
+        }
+        if (r.isShortfall) {
+          let adviceHtml = "";
+          if (r.shortfallSuggestions && r.shortfallSuggestions.length > 0) {
+            adviceHtml += `<div class="table-tooltip">`;
+            adviceHtml += `<span class="pill pill-amber pulsing" style="cursor:help">⚠️ SHORTFALL</span>`;
+            adviceHtml += `<div class="tooltiptext">`;
+            adviceHtml += `<strong style="display:block;margin-bottom:4px;color:#fcd34d">Shortfall Actions:</strong>`;
+            adviceHtml += `<ul style="margin:0;padding-left:14px;list-style-type:disc">`;
+            r.shortfallSuggestions.forEach(adv => {
+              adviceHtml += `<li style="margin-bottom:4px">${adv.msg}</li>`;
+            });
+            adviceHtml += `</ul>`;
+            adviceHtml += `</div></div>`;
+          } else {
+            adviceHtml += `<span class="pill pill-amber pulsing">⚠️ SHORTFALL</span>`;
+          }
+          extra.push(adviceHtml);
+        }
+        const combined = pills + (extra.length > 0 ? (pills ? '<br>' : '') + extra.join('<br>') : '');
+        return combined || d;
+      })()}</td>
+    </tr>`;
+  }).join('');
+
+  renderChart(rows);
+}
+
+function renderChart(rows) {
+  const ctx = document.getElementById('portfolioChart').getContext('2d');
+  const labels = rows.map(r => r.age);
+  
+  const dataTaxable = rows.map(r => r.taxable);
+  const dataTaxDef = rows.map(r => r.taxDef);
+  const dataTaxFree = rows.map(r => r.taxFree);
+  const dataHk = rows.map(r => r.hk);
+
+  if (portfolioChart) {
+    portfolioChart.destroy();
+  }
+
+  portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Taxable',
+          data: dataTaxable,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'Tax-Deferred',
+          data: dataTaxDef,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'Tax-Free',
+          data: dataTaxFree,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'HK',
+          data: dataHk,
+          borderColor: '#6b7280',
+          backgroundColor: 'rgba(107, 114, 128, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#4b5563', font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) label += ': ';
+              if (context.parsed.y !== null) {
+                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(context.parsed.y);
+              }
+              return label;
+            },
+            footer: function(tooltipItems) {
+              let sum = 0;
+              tooltipItems.forEach(function(tooltipItem) {
+                sum += tooltipItem.parsed.y;
+              });
+              return 'Total: ' + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(sum);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Age' },
+          grid: { display: false }
+        },
+        y: {
+          stacked: true,
+          title: { display: true, text: 'Portfolio Value' },
+          ticks: {
+            callback: function(value) {
+              if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+              if (value >= 1000) return '$' + (value / 1000).toFixed(0) + 'k';
+              return '$' + value;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+run();
+
+// ── Export helpers ────────────────────────────────────────────────────────
+
+function getAssumptions(){
+  const f = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    const val = el.value;
+    if (id === 'ss-ben' || id === 'exp-base' || id.startsWith('init-')) {
+      return '$' + formatComma(val);
+    }
+    return val;
+  };
+  return {
+    'Current Age': f('c-age'),
+    'Retirement Age': f('r-age'),
+    'Plan to Age': f('p-age'),
+    'SS Monthly Benefit': f('ss-ben'),
+    'Annual Expenses': f('exp-base'),
+    'Inflation Rate': f('infl')+'%',
+    'Post-Retirement Return': f('post-ret')+'%',
+    'Growth (Taxable)': f('g-tax')+'%',
+    'Growth (Tax-Def)': f('g-td')+'%',
+    'Growth (Tax-Free)': f('g-tf')+'%',
+    'Growth (HK)': f('g-hk')+'%',
+    'Init Taxable Balance': f('init-taxable'),
+    'Init Tax-Def Balance': f('init-td'),
+    'Init Tax-Free Balance': f('init-tf'),
+    'Init HK Balance': f('init-hk'),
+    'Taxable WD Rate': f('wd-taxable')+'%',
+    'Tax-Def WD Rate (Before 65)': f('wd-td')+'%',
+    'Tax-Def WD Rate (65-RMD)': f('wd-td-65')+'%',
+    'Tax-Def WD Start Age': f('wd-td-age'),
+    'Tax-Free WD Rate': f('wd-tf')+'%',
+    'Tax-Free WD Start Age': f('wd-tf-age'),
+    'HK WD Rate': f('wd-hk')+'%',
+    'Taxable % LTCG': f('cg-pct')+'%',
+    'Taxable % Ordinary': f('ord-pct')+'%',
+    'Tax-Def % Ordinary': '100%',
+    'SEPP Enabled': document.getElementById('sepp-enable').checked ? 'Yes' : 'No',
+    'SEPP Start Age': f('sepp-start-age'),
+    'SEPP Method': document.getElementById('sepp-method').value,
+    'SEPP Interest Rate': f('sepp-rate')+'%',
+    'One-Time Expense List': (() => {
+      const dynamicRows = document.getElementById('oth-rows-wrapper') ? document.getElementById('oth-rows-wrapper').querySelectorAll('.oth-row-item') : [];
+      let items = [];
+      dynamicRows.forEach((row, i) => {
+        const ageInput = row.querySelector('.oth-age');
+        const amtInput = row.querySelector('.oth-amount');
+        const lblInput = row.querySelector('.oth-label');
+        if (ageInput && amtInput) {
+          const age = ageInput.value || '';
+          const amount = amtInput.value || '';
+          const desc = lblInput ? lblInput.value : '';
+          if (age && amount) items.push(`Age ${age}: $${amount} (${desc})`);
+        }
+      });
+      return items.join('; ') || 'None';
+    })(),
+    'Tax Filing Status': (document.getElementById('filing-status') ? document.getElementById('filing-status').options[document.getElementById('filing-status').selectedIndex].text : 'Single')
+  };
+}
+
+function getTableData(){
+  const headers = ['Age','Taxable ($)','Tax-Def ($)','RMD ($)','Tax-Free ($)','HK ($)','Total ($)',
+    'Gross Spend ($)','SS Offset ($)','Total Draw ($)',
+    'Fed Tax ($)','NY State ($)','NYC Tax ($)','NIIT ($)','Med IRMAA ($)','Tax Bill ($)','Withdrawn From'];
+  const rows=[headers];
+  document.querySelectorAll('#tbl-body tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(td=>td.innerText.trim());
+    rows.push(cells);
+  });
+  return rows;
+}
+
+function flash(msg){
+  const el=document.getElementById('export-status');
+  el.textContent=msg;
+  setTimeout(()=>el.textContent='',2500);
+}
+
+function exportCSV(){
+  const rows=getTableData();
+  const asm=getAssumptions();
+  let csv='ASSUMPTIONS\n';
+  Object.entries(asm).forEach(([k,v])=>{ csv+=`"${k}","${v}"\n`; });
+  csv+='\nPROJECTION\n';
+  rows.forEach(row=>{ csv+=row.map(c=>`"${c}"`).join(',')+'\n'; });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  flash('✓ CSV downloaded');
+}
+
+function exportXLSX(){
+  const wb=XLSX.utils.book_new();
+
+  // Assumptions sheet
+  const asmRows=[['Assumption','Value']];
+  Object.entries(getAssumptions()).forEach(([k,v])=>asmRows.push([k,v]));
+  const wsA=XLSX.utils.aoa_to_sheet(asmRows);
+  wsA['!cols']=[{wch:32},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsA,'Assumptions');
+
+  // Projection sheet
+  const tableRows=getTableData();
+  const wsP=XLSX.utils.aoa_to_sheet(tableRows);
+  wsP['!cols']=[{wch:6},{wch:9},{wch:12},{wch:12},{wch:10},{wch:12},{wch:10},{wch:13},
+                {wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,wsP,'Projection');
+
+  XLSX.writeFile(wb,`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.xlsx`);
+  flash('✓ Excel downloaded');
+}
+
+function exportJSON(){
+  const asm=getAssumptions();
+  const rows=[];
+  document.querySelectorAll('#tbl-body tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(td=>td.innerText.trim());
+      if(cells[0]) rows.push({
+        age:cells[0],taxable:cells[1],taxDef:cells[2],rmd:cells[3],taxFree:cells[4],hk:cells[5],
+        total:cells[6],grossSpend:cells[7],ssOffset:cells[8],totalDraw:cells[9],
+        fedTax:cells[10],nyState:cells[11],nycTax:cells[12],niit:cells[13],medIrmaa:cells[14],taxBill:cells[15],
+        withdrawnFrom:cells[16]
+      });
+  });
+  const out={generated:new Date().toISOString(),assumptions:asm,projection:rows};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  flash('✓ JSON downloaded');
+}
+
+function exportPDF(){
+  // Populate print-only assumptions summary before printing
+  const asm=getAssumptions();
+  const el=document.getElementById('print-assumptions');
+  el.innerHTML='<strong>Assumptions:</strong> '+
+    Object.entries(asm).map(([k,v])=>`${k}: <strong>${v}</strong>`).join(' · ');
+  window.print();
+  flash('✓ Print dialog opened');
+}
+</script>
+</body>
+</html>

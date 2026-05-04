@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FatFIRE Retirement Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#f5f4f0;color:#1a1a18;font-size:14px}
+.page{max-width:1400px;margin:0 auto;padding:1.5rem}
+h1{font-size:20px;font-weight:600;margin-bottom:4px;color:#1a1a18}
+.subtitle{font-size:13px;color:#6b6a65;margin-bottom:1.5rem}
+.panel{background:#fff;border:0.5px solid #d8d6cc;border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.panel-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6b6a65;margin-bottom:1rem}
+.ctrl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.ctrl-card{background:#f5f4f0;border-radius:8px;padding:.75rem 1rem}
+.ctrl-card.blue{border-left:3px solid #2563EB}
+.ctrl-card.amber{border-left:3px solid #D97706}
+.ctrl-card.green{border-left:3px solid #16A34A}
+.ctrl-card.gray{border-left:3px solid #6B7280}
+.ctrl-card.purple{border-left:3px solid #7C3AED}
+.ctrl-label{font-size:11px;color:#6b6a65;margin-bottom:5px}
+.ctrl-row{display:flex;align-items:center;gap:8px}
+.ctrl-row input[type=range]{flex:1;cursor:pointer;accent-color:#2563EB}
+.ctrl-val{font-size:13px;font-weight:600;color:#1a1a18;min-width:64px;text-align:right}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem}
+.metric{background:#fff;border:0.5px solid #d8d6cc;border-radius:8px;padding:.875rem 1rem}
+.metric-label{font-size:11px;color:#6b6a65;margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:600;color:#1a1a18}
+.metric-value.g{color:#16A34A}.metric-value.a{color:#D97706}.metric-value.r{color:#DC2626}
+.formula-bar{font-size:12px;color:#4b5563;padding:.6rem 1rem;background:#EFF6FF;border-radius:8px;border-left:3px solid #2563EB;margin-bottom:.75rem}
+.note-bar{font-size:11px;color:#6b6a65;padding:.5rem 1rem;background:#f5f4f0;border-radius:8px;margin-bottom:.75rem}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#6b6a65;margin-bottom:.75rem;align-items:center}
+.leg{display:flex;align-items:center;gap:5px}
+.leg-box{width:10px;height:10px;border-radius:2px}
+.tbl-wrap{overflow-x:auto;border:0.5px solid #d8d6cc;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f5f4f0;color:#6b6a65;font-weight:600;font-size:10px;padding:7px 8px;text-align:right;border-bottom:0.5px solid #d8d6cc;white-space:nowrap}
+th:first-child,th:nth-child(2){text-align:left}
+td{padding:6px 8px;border-bottom:0.5px solid #eeece6;text-align:right;color:#1a1a18;white-space:nowrap}
+td:first-child{text-align:left;color:#6b6a65;font-weight:600}
+td:nth-child(2){text-align:left;color:#9ca3af;font-size:11px}
+tr:last-child td{border-bottom:none}
+tr.accum td{color:#9ca3af}tr.accum td:first-child{color:#9ca3af}
+tr.ret-start td{background:#EFF6FF;color:#1d4ed8;font-weight:600}
+tr.ss-start td{background:#F0FDF4;color:#15803d;font-weight:600}
+tr.warn td{background:#FFFBEB}
+tr.danger td{background:#FEF2F2}
+tr:hover td{background:#f9f8f4}
+tr.ret-start:hover td{background:#DBEAFE}
+tr.ss-start:hover td{background:#DCFCE7}
+tr.td-start td{background:#FEF3C7;color:#92400e;font-weight:600}
+tr.tf-start td{background:#DCFCE7;color:#15803d;font-weight:600}
+.shortfall-warning { background-color: #FEF2F2 !important; color: #B91C1C; font-weight: 600; border-left: 3px solid #DC2626 !important; }
+.pulsing { animation: pulse 2s infinite; border: 1px solid #F87171 !important; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+.pill{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;white-space:nowrap;display:inline-block;margin:1px}
+.pill-blue{background:#DBEAFE;color:#1d4ed8}
+.pill-amber{background:#FEF3C7;color:#92400e}
+.pill-green{background:#DCFCE7;color:#15803d}
+.pill-gray{background:#F3F4F6;color:#374151}
+.grp-hdr{background:#f5f4f0;font-size:10px;font-weight:600;color:#9ca3af;padding:5px 8px;text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid #d8d6cc;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+.export-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;padding:.875rem 1.25rem;background:#fff;border:0.5px solid #d8d6cc;border-radius:10px}
+.export-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6b6a65;margin-right:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .15s}
+.btn:hover{opacity:.85;transform:translateY(-1px)}
+.btn-csv{background:#16A34A;color:#fff;border-color:#15803d}
+.btn-xlsx{background:#1d6f42;color:#fff;border-color:#166534}
+.btn-pdf{background:#DC2626;color:#fff;border-color:#b91c1c}
+.btn-json{background:#374151;color:#fff;border-color:#1f2937}
+.export-divider{width:1px;height:24px;background:#d8d6cc;margin:0 4px}
+@media print{.export-bar,.panel,.ctrl-card,.ctrl-row,.ctrl-grid,.formula-bar,.note-bar,.legend-row{display:none!important}.summary-grid{display:none!important}.tbl-wrap{border:none}.page{padding:0}body{background:#fff}table{font-size:9px}h1{display:block!important}}.print-only{display:none}.ctrl-num {
+  width: 80px;
+  padding: 2px 6px;
+  border: 1px solid #d8d6cc;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  text-align: right;
+  background: rgba(255, 255, 255, 0.9);
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: textfield;
+}
+.ctrl-num:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #fff;
+}
+.ctrl-num::-webkit-inner-spin-button, .ctrl-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>🏦 FatFIRE Retirement Calculator</h1>
+  <p class="subtitle">NYC early retirement projection · Adjust assumptions with sliders · Social Security at 65</p>
+
+  <div class="export-bar">
+    <span class="export-label">Export</span>
+    <button class="btn btn-csv" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-xlsx" onclick="exportXLSX()">⬇ Excel (.xlsx)</button>
+    <div class="export-divider"></div>
+    <button class="btn btn-pdf" onclick="exportPDF()">🖨 Print / PDF</button>
+    <div class="export-divider"></div>
+    <button class="btn btn-json" onclick="exportJSON()">{ } JSON</button>
+    <span style="margin-left:auto;font-size:11px;color:#9ca3af" id="export-status"></span>
+  </div>
+
+  <div class="print-only" id="print-assumptions"></div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">General settings</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card"><div class="ctrl-label">Current age</div><div class="ctrl-row"><input type="range" id="c-age" min="50" max="58" step="1" value="52"><input type="text" id="c-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="40"><span class="ctrl-val" id="c-age-v" style="display:none">52</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Retirement age</div><div class="ctrl-row"><input type="range" id="r-age" min="52" max="62" step="1" value="54"><input type="text" id="r-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="54"><span class="ctrl-val" id="r-age-v" style="display:none">54</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Plan to age</div><div class="ctrl-row"><input type="range" id="p-age" min="80" max="100" step="1" value="90"><input type="text" id="p-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="95"><span class="ctrl-val" id="p-age-v" style="display:none">90</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">SS monthly benefit</div><div class="ctrl-row"><input type="range" id="ss-ben" min="0" max="5000" step="100" value="2800"><input type="text" id="ss-ben-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="3,500"><span class="ctrl-val" id="ss-ben-v" style="display:none">$2,800</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Annual expenses</div><div class="ctrl-row"><input type="range" id="exp-base" min="100000" max="800000" step="5000" value="459295"><input type="text" id="exp-base-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="459,295"><span class="ctrl-val" id="exp-base-v" style="display:none">$459K</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Inflation rate</div><div class="ctrl-row"><input type="range" id="infl" min="1.5" max="5" step="0.25" value="3"><input type="text" id="infl-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="3.0"><span class="ctrl-val" id="infl-v" style="display:none">3.0%</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Post-retirement return</div><div class="ctrl-row"><input type="range" id="post-ret" min="3" max="9" step="0.25" value="6"><input type="text" id="post-ret-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="6.0"><span class="ctrl-val" id="post-ret-v" style="display:none">6.0%</span></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Initial portfolio balances</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card"><div class="ctrl-label">Taxable accounts</div><div class="ctrl-row"><input type="range" id="init-taxable" min="0" max="15000000" step="100000" value="10137708"><input type="text" id="init-taxable-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="10,137,708"><span class="ctrl-val" id="init-taxable-v" style="display:none">$10.1M</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Tax-deferred</div><div class="ctrl-row"><input type="range" id="init-td" min="0" max="5000000" step="50000" value="1319342"><input type="text" id="init-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="1,319,342"><span class="ctrl-val" id="init-td-v" style="display:none">$1.3M</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">Tax-free</div><div class="ctrl-row"><input type="range" id="init-tf" min="0" max="2000000" step="25000" value="354446"><input type="text" id="init-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="354,446"><span class="ctrl-val" id="init-tf-v" style="display:none">$354K</span></div></div>
+        <div class="ctrl-card"><div class="ctrl-label">HK portfolio</div><div class="ctrl-row"><input type="range" id="init-hk" min="0" max="5000000" step="50000" value="1000000"><input type="text" id="init-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 is-currency" value="1,000,000"><span class="ctrl-val" id="init-hk-v" style="display:none">$1M</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Withdrawal rates &amp; start ages by account</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card blue" style="grid-column:1/-1"><div class="ctrl-label">Taxable — % withdrawn/yr · starts at retirement</div><div class="ctrl-row"><input type="range" id="wd-taxable" min="0" max="20" step="0.5" value="6"><input type="text" id="wd-taxable-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="100.0"><span class="ctrl-val" id="wd-taxable-v" style="display:none">6.0%</span></div></div>
+
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-deferred (IRA/401k) — % withdrawn/yr</div><div class="ctrl-row"><input type="range" id="wd-td" min="0" max="20" step="0.5" value="4"><input type="text" id="wd-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0.0"><span class="ctrl-val" id="wd-td-v" style="display:none">4.0%</span></div></div>
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-deferred — start withdrawals at age</div><div class="ctrl-row"><input type="range" id="wd-td-age" min="54" max="73" step="1" value="60"><input type="text" id="wd-td-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="72"><span class="ctrl-val" id="wd-td-age-v" style="display:none">60</span></div></div>
+
+        <div class="ctrl-card green"><div class="ctrl-label">Tax-free (Roth/HSA) — % withdrawn/yr</div><div class="ctrl-row"><input type="range" id="wd-tf" min="0" max="20" step="0.5" value="2"><input type="text" id="wd-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0.0"><span class="ctrl-val" id="wd-tf-v" style="display:none">2.0%</span></div></div>
+        <div class="ctrl-card green"><div class="ctrl-label">Tax-free — start withdrawals at age</div><div class="ctrl-row"><input type="range" id="wd-tf-age" min="54" max="80" step="1" value="65"><input type="text" id="wd-tf-age-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="65"><span class="ctrl-val" id="wd-tf-age-v" style="display:none">65</span></div></div>
+
+        <div class="ctrl-card gray" style="grid-column:1/-1"><div class="ctrl-label">HK portfolio — % withdrawn/yr (no US tax) · starts at retirement</div><div class="ctrl-row"><input type="range" id="wd-hk" min="0" max="20" step="0.5" value="3"><input type="text" id="wd-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0.0"><span class="ctrl-val" id="wd-hk-v" style="display:none">3.0%</span></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Growth rates &amp; tax assumptions</div>
+      <div class="ctrl-grid" style="grid-template-columns:1fr 1fr">
+        <div class="ctrl-card blue"><div class="ctrl-label">Taxable pre-ret growth</div><div class="ctrl-row"><input type="range" id="g-tax" min="4" max="15" step="0.25" value="11.77"><input type="text" id="g-tax-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="7.0"><span class="ctrl-val" id="g-tax-v" style="display:none">11.8%</span></div></div>
+        <div class="ctrl-card amber"><div class="ctrl-label">Tax-def pre-ret growth</div><div class="ctrl-row"><input type="range" id="g-td" min="4" max="14" step="0.25" value="8.26"><input type="text" id="g-td-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="7.0"><span class="ctrl-val" id="g-td-v" style="display:none">8.3%</span></div></div>
+        <div class="ctrl-card green"><div class="ctrl-label">Tax-free pre-ret growth</div><div class="ctrl-row"><input type="range" id="g-tf" min="4" max="14" step="0.25" value="10.28"><input type="text" id="g-tf-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="10.3"><span class="ctrl-val" id="g-tf-v" style="display:none">10.3%</span></div></div>
+        <div class="ctrl-card gray"><div class="ctrl-label">HK portfolio growth</div><div class="ctrl-row"><input type="range" id="g-hk" min="-8" max="6" step="0.25" value="-4.76"><input type="text" id="g-hk-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="7.0"><span class="ctrl-val" id="g-hk-v" style="display:none">-4.8%</span></div></div>
+        <div class="ctrl-card blue"><div class="ctrl-label">Taxable — % LTCG</div><div class="ctrl-row"><input type="range" id="cg-pct" min="0" max="100" step="5" value="70"><input type="text" id="cg-pct-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="60"><span class="ctrl-val" id="cg-pct-v" style="display:none">70%</span></div></div>
+        <div class="ctrl-card blue"><div class="ctrl-label">Taxable — % ordinary</div><div class="ctrl-row"><input type="range" id="ord-pct" min="0" max="100" step="5" value="30"><input type="text" id="ord-pct-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="0"><span class="ctrl-val" id="ord-pct-v" style="display:none">30%</span></div></div>
+        <div class="ctrl-card amber" style="grid-column:1/-1"><div class="ctrl-label">Tax-deferred — % ordinary income</div><div class="ctrl-row"><input type="range" id="td-ord-pct" min="50" max="100" step="5" value="100"><input type="text" id="td-ord-pct-n" inputmode="decimal" class="w-24 px-2 py-1 text-sm border rounded bg-gray-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500" value="100"><span class="ctrl-val" id="td-ord-pct-v" style="display:none">100%</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="padding: 1.5rem;">
+    <div class="panel-title">Portfolio Projection</div>
+    <div style="height: 400px; position: relative;">
+      <canvas id="portfolioChart"></canvas>
+    </div>
+  </div>
+
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <div class="formula-bar"><strong>Cash flow formula:</strong> &nbsp; Gross spend (inflation-adj) &nbsp;+&nbsp; Tax bill (Fed + NY + NYC) &nbsp;−&nbsp; SS income &nbsp;=&nbsp; <strong>Total portfolio draw</strong></div>
+  <div class="note-bar"><strong>Tax rules:</strong> Taxable: 70% LTCG / 30% ordinary (NY &amp; NYC tax LTCG as ordinary) &nbsp;|&nbsp; Tax-deferred: 100% ordinary &nbsp;|&nbsp; Tax-free (Roth/HSA): no tax &nbsp;|&nbsp; HK: excluded from US income &nbsp;|&nbsp; SS: 85% inclusion</div>
+
+  <div class="legend-row">
+    <span class="leg"><span class="leg-box" style="background:#EFF6FF;border:1px solid #93C5FD"></span>Retirement start</span>
+    <span class="leg"><span class="leg-box" style="background:#FEF3C7;border:1px solid #FCD34D"></span>Tax-deferred draws begin</span>
+    <span class="leg"><span class="leg-box" style="background:#DCFCE7;border:1px solid #86EFAC"></span>Tax-free / SS begins</span>
+    <span class="leg"><span class="leg-box" style="background:#FFFBEB;border:1px solid #FCD34D"></span>Portfolio &lt; 10x spend</span>
+    <span class="leg"><span class="leg-box" style="background:#FEF2F2;border:1px solid #FCA5A5"></span>Portfolio &lt; 5x spend</span>
+    <span class="leg"><span class="leg-box" style="background:#fef2f2;border-left:4px solid #ef4444"></span>Shortfall (portfolio depleted)</span>
+    <span class="leg"><span class="pill pill-blue">Taxable</span><span class="pill pill-amber">Tax-def</span><span class="pill pill-green">Tax-free</span><span class="pill pill-gray">HK</span> withdrawal sources</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="grp-hdr" colspan="2"></th>
+          <th class="grp-hdr" colspan="6" style="color:#1d4ed8">Account balances (end of year)</th>
+          <th class="grp-hdr" colspan="4" style="color:#92400e">Annual cash flow</th>
+          <th class="grp-hdr" colspan="4" style="color:#991b1b">Taxes paid</th>
+          <th class="grp-hdr" style="color:#374151">Withdrawn from</th>
+        </tr>
+        <tr>
+          <th style="width:34px;text-align:left">Age</th>
+          <th style="width:54px;text-align:left">Phase</th>
+          <th style="width:68px">Taxable</th>
+          <th style="width:68px">Tax-def</th>
+          <th style="width:68px">RMD</th>
+          <th style="width:68px">Tax-free</th>
+          <th style="width:56px">HK</th>
+          <th style="width:72px">Total</th>
+          <th style="width:66px">Gross spend</th>
+          <th style="width:56px">SS offset</th>
+          <th style="width:60px">Tax bill</th>
+          <th style="width:68px">Total draw ▲</th>
+          <th style="width:52px">Fed</th>
+          <th style="width:52px">NY St</th>
+          <th style="width:60px">NYC</th>
+          <th style="width:148px">Sources</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let portfolioChart = null;
+const fC = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
+const fK = n => fC(n);
+const fM = n => fC(n);
+const fP = n => n.toFixed(1)+'%';
+
+function calcFedTax(ord, ltcg) {
+    const std = 14600;
+    const taxableOrd = Math.max(0, ord - std);
+    
+    // Ordinary Brackets (Single 2024)
+    const ordBrackets = [
+        [11600, 0.10],
+        [47150, 0.12],
+        [100525, 0.22],
+        [191950, 0.24],
+        [243725, 0.32],
+        [609350, 0.35],
+        [Infinity, 0.37]
+    ];
+    
+    let ordTax = 0;
+    let remainingOrd = taxableOrd;
+    let prevLimit = 0;
+    for (const [limit, rate] of ordBrackets) {
+        const amount = Math.min(remainingOrd, limit - prevLimit);
+        if (amount <= 0) break;
+        ordTax += amount * rate;
+        remainingOrd -= amount;
+        prevLimit = limit;
+    }
+    
+    // LTCG Brackets (Single 2024)
+    // These thresholds apply to TOTAL taxable income (Taxable Ord + LTCG)
+    let ltcgTax = 0;
+    let currentTaxableIncome = taxableOrd;
+    let remainingLtcg = ltcg;
+    
+    // 0% bracket up to $47,025
+    const zeroLimit = 47025;
+    const cap0 = Math.max(0, zeroLimit - currentTaxableIncome);
+    const ltcgIn0 = Math.min(remainingLtcg, cap0);
+    remainingLtcg -= ltcgIn0;
+    currentTaxableIncome += ltcgIn0;
+    
+    // 15% bracket up to $518,900
+    const fifteenLimit = 518900;
+    const cap15 = Math.max(0, fifteenLimit - currentTaxableIncome);
+    const ltcgIn15 = Math.min(remainingLtcg, cap15);
+    ltcgTax += ltcgIn15 * 0.15;
+    remainingLtcg -= ltcgIn15;
+    currentTaxableIncome += ltcgIn15;
+    
+    // 20% bracket above $518,900
+    ltcgTax += remainingLtcg * 0.20;
+    
+    return ordTax + ltcgTax;
+}
+
+function calcNIIT(ord, ltcg) {
+    const threshold = 200000;
+    const magi = ord + ltcg;
+    const excess = Math.max(0, magi - threshold);
+    return Math.min(ltcg, excess) * 0.038;
+}
+
+function calcNYTax(ord,ltcg){
+  const t=Math.max(0,(ord+ltcg)-8000);
+  return{nyState:t*0.0685,nyCity:t*0.03876};
+}
+
+function makePills(dT,dTd,dTf,dHk){
+  const p=[];
+  if(dT>0) p.push(`<span class="pill pill-blue">Taxable ${fK(dT)}</span>`);
+  if(dTd>0) p.push(`<span class="pill pill-amber">Tax-Def ${fK(dTd)}</span>`);
+  if(dTf>0) p.push(`<span class="pill pill-green">Tax-Free ${fK(dTf)}</span>`);
+  if(dHk>0) p.push(`<span class="pill pill-gray">HK ${fK(dHk)}</span>`);
+  return p.join('');
+}
+
+// ── Synchronization Helpers ────────────────────────────────────────────────
+
+const formatComma = v => {
+  if (v === '' || v === null || v === undefined) return '';
+  const n = parseFloat(v.toString().replace(/,/g, ''));
+  return isNaN(n) ? '' : n.toLocaleString();
+};
+
+const unformatComma = v => {
+  return parseFloat(v.toString().replace(/,/g, '')) || 0;
+};
+
+function setupSync(id) {
+  const range = document.getElementById(id);
+  const num = document.getElementById(id + '-n');
+  if (!range || !num) return;
+
+  // Update summary span (optional, keeping for backward compatibility if hidden)
+  const updateDisplay = (val) => {
+    const disp = document.getElementById(id + '-v');
+    if (disp) {
+      let v = parseFloat(val);
+      let text = val;
+      if (id === 'ss-ben' || id === 'exp-base' || id.startsWith('init-')) {
+        text = '$' + Math.round(v).toLocaleString();
+      } else if (id.startsWith('g-') || id.startsWith('wd-') || id === 'infl' || id === 'post-ret' || id === 'cg-pct' || id === 'ord-pct' || id === 'td-ord-pct') {
+        text = v.toFixed(1) + '%';
+      }
+      disp.textContent = text;
+    }
+  };
+
+  range.addEventListener('input', () => {
+    num.value = num.classList.contains('is-currency') ? formatComma(range.value) : range.value;
+    updateDisplay(range.value);
+    run();
+  });
+
+  num.addEventListener('input', () => {
+    let raw = unformatComma(num.value);
+    range.value = raw;
+    updateDisplay(raw);
+    run();
+  });
+
+  if (num.classList.contains('is-currency')) {
+    num.addEventListener('blur', () => {
+      num.value = formatComma(range.value);
+    });
+  }
+}
+
+// Initialize sync for all sliders
+document.querySelectorAll('input[type=range]').forEach(input => {
+  setupSync(input.id);
+});
+
+function run(){
+  const cAge=+document.getElementById('c-age').value;
+  const rAge=+document.getElementById('r-age').value;
+  const pAge=+document.getElementById('p-age').value;
+  const ssAnnual=+document.getElementById('ss-ben').value*12;
+  const expBase=+document.getElementById('exp-base').value;
+  const infl=+document.getElementById('infl').value/100;
+  const postRet=+document.getElementById('post-ret').value/100;
+  const gTax=+document.getElementById('g-tax').value/100;
+  const gTd=+document.getElementById('g-td').value/100;
+  const gTf=+document.getElementById('g-tf').value/100;
+  const gHk=+document.getElementById('g-hk').value/100;
+  const wdT=+document.getElementById('wd-taxable').value/100;
+  const wdTd=+document.getElementById('wd-td').value/100;
+  const wdTf=+document.getElementById('wd-tf').value/100;
+  const wdHk=+document.getElementById('wd-hk').value/100;
+  const wdTdAge=+document.getElementById('wd-td-age').value;
+  const wdTfAge=+document.getElementById('wd-tf-age').value;
+  const cgPct=+document.getElementById('cg-pct').value/100;
+  const ordPct=+document.getElementById('ord-pct').value/100;
+  const tdOrd=+document.getElementById('td-ord-pct').value/100;
+  let taxable=+document.getElementById('init-taxable').value;
+  let taxDef=+document.getElementById('init-td').value;
+  let taxFree=+document.getElementById('init-tf').value;
+  let hk=+document.getElementById('init-hk').value;
+
+  const rmdTable = {72:27.4, 73:26.5, 74:25.5, 75:24.6, 76:23.7, 77:22.9, 78:22.0, 79:21.1, 80:20.2, 81:19.4, 82:18.5, 83:17.7, 84:16.8, 85:16.0, 86:15.2, 87:14.4, 88:13.7, 89:12.9, 90:12.2, 91:11.5, 92:10.8, 93:10.1, 94:9.5, 95:8.9, 96:8.4, 97:7.8, 98:7.3, 99:6.8, 100:6.4};
+  const rmdStartAge = 75;
+
+  const rows=[];let depleted=false;
+  for(let age=cAge;age<=pAge;age++){
+    const isRet=age>=rAge,hasSS=age>=65;
+    const ss=hasSS?ssAnnual:0;
+    const gs=isRet?expBase*Math.pow(1+infl,age-rAge):0;
+    const rmd = (age >= rmdStartAge && rmdTable[age]) ? (taxDef / rmdTable[age]) : 0;
+    if(!isRet){
+      taxable*=(1+gTax);taxDef*=(1+gTd);taxFree*=(1+gTf);hk*=(1+gHk);
+      rows.push({age,phase:'Accum.',taxable,taxDef,rmd,taxFree,hk,total:taxable+taxDef+taxFree+hk,gs:0,ss:0,taxBill:0,totalDraw:0,fed:0,nys:0,nyc:0,dT:0,dTd:0,dTf:0,dHk:0,isRet:false});
+    } else {
+      let pT = (taxable > 0) ? taxable * wdT : 0;
+      let pTd = (taxDef > 0) ? Math.max(taxDef * (age >= wdTdAge ? wdTd : 0), rmd) : 0;
+      let pTf = (taxFree > 0) ? taxFree * (age >= wdTfAge ? wdTf : 0) : 0;
+      let pHk = (hk > 0) ? hk * wdHk : 0;
+      let ord = pT * ordPct + pTd * tdOrd + ss * 0.85;
+      let ltcg = pT * cgPct;
+      let fed = calcFedTax(ord, ltcg);
+      let { nyState: nys, nyCity: nyc } = calcNYTax(ord, ltcg);
+      let niit = calcNIIT(ord, ltcg);
+      let taxBill = fed + nys + nyc + niit;
+      let totalDraw = pT + pTd + pTf + pHk;
+      let totalNeeded = gs + taxBill - ss;
+      let isShortfall = (totalNeeded > totalDraw + 1);
+      taxable = Math.max(0, taxable - pT) * (1 + postRet);
+      taxDef = Math.max(0, taxDef - pTd) * (1 + postRet);
+      taxFree = Math.max(0, taxFree - pTf) * (1 + postRet);
+      hk = Math.max(0, hk - pHk) * (1 + postRet);
+      const total = taxable + taxDef + taxFree + hk;
+      if (total <= 0) depleted = true;
+      rows.push({age,phase:hasSS?'Ret+SS':'Retired',taxable,taxDef,rmd,taxFree,hk,total,gs,ss,taxBill,totalDraw,fed,nys,nyc,niit,dT:pT,dTd:pTd,dTf:pTf,dHk:pHk,isRet:true,isShortfall});
+    }
+  }
+  const retRow=rows.find(r=>r.age===rAge);
+  const endRow=rows[rows.length-1];
+  const retTotal=retRow?retRow.total:0;
+  const firstRet=rows.find(r=>r.isRet);
+  const wr=firstRet&&retTotal>0?firstRet.gs/retTotal*100:0;
+  const wrc=wr<=3.5?'g':wr<=5?'a':'r';
+
+    const anyShortfall = rows.some(r => r.isShortfall);
+    document.getElementById('summary-grid').innerHTML=`
+    <div class="metric"><div class="metric-label">Portfolio today</div><div class="metric-value">${fM(+document.getElementById('init-taxable').value + +document.getElementById('init-td').value + +document.getElementById('init-tf').value + +document.getElementById('init-hk').value)}</div></div>
+    <div class="metric"><div class="metric-label">Portfolio at retirement (${rAge})</div><div class="metric-value">${fM(retTotal)}</div></div>
+    <div class="metric"><div class="metric-label">Initial withdrawal rate</div><div class="metric-value ${wrc}">${fP(wr)}</div></div>
+    <div class="metric"><div class="metric-label">SS annual income (65+)</div><div class="metric-value g">${fK(ssAnnual)}</div></div>
+    <div class="metric"><div class="metric-label">Tax-deferred draws start</div><div class="metric-value" style="color:#D97706">Age ${wdTdAge}</div></div>
+    <div class="metric"><div class="metric-label">Portfolio at age ${pAge}</div><div class="metric-value ${anyShortfall?'r':endRow.total>retTotal?'g':'a'}">${anyShortfall?'Shortfall':fM(endRow.total)}</div></div>
+  `;
+
+  document.getElementById('tbl-body').innerHTML=rows.map(r=>{
+    let rc='';
+    if(!r.isRet)rc='accum';
+    else if(r.age===rAge)rc='ret-start';
+    else if(r.age===65)rc='ss-start';
+    else if(r.age===wdTdAge)rc='td-start';
+    else if(r.age===wdTfAge)rc='tf-start';
+    if(r.isShortfall)rc+=' shortfall';
+    const d='—';
+    return`<tr class="${rc}">
+      <td>${r.age}</td><td>${r.phase}</td>
+      <td>${fK(r.taxable)}</td><td>${fK(r.taxDef)}</td>
+      <td style="color:#fbbf24;font-weight:500">${r.rmd>0?fK(r.rmd):d}</td>
+      <td>${fK(r.taxFree)}</td><td>${fK(r.hk)}</td>
+      <td><strong>${fM(r.total)}</strong></td>
+      <td>${r.isRet?fK(r.gs):d}</td>
+      <td>${r.ss>0?'−'+fK(r.ss):d}</td>
+      <td>${r.isRet?'+'+fK(r.taxBill):d}</td>
+      <td>${r.isRet?fK(r.totalDraw):d}</td>
+      <td>${r.isRet?fK(r.fed):d}</td>
+      <td>${r.isRet?fK(r.nys):d}</td>
+      <td>${r.isRet?fK(r.nyc):d}</td>
+      <td>${r.isRet?fK(r.niit):d}</td>
+      <td>${r.isRet?makePills(r.dT,r.dTd,r.dTf,r.dHk) + (r.isShortfall?'<span class="pill pill-amber pulsing" title="Draw insufficient to cover spend + taxes">⚠️ SHORTFALL</span>':''):d}</td>
+    </tr>`;
+  }).join('');
+
+  renderChart(rows);
+}
+
+function renderChart(rows) {
+  const ctx = document.getElementById('portfolioChart').getContext('2d');
+  const labels = rows.map(r => r.age);
+  
+  const dataTaxable = rows.map(r => r.taxable);
+  const dataTaxDef = rows.map(r => r.taxDef);
+  const dataTaxFree = rows.map(r => r.taxFree);
+  const dataHk = rows.map(r => r.hk);
+
+  if (portfolioChart) {
+    portfolioChart.destroy();
+  }
+
+  portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Taxable',
+          data: dataTaxable,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'Tax-Deferred',
+          data: dataTaxDef,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'Tax-Free',
+          data: dataTaxFree,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        },
+        {
+          label: 'HK',
+          data: dataHk,
+          borderColor: '#6b7280',
+          backgroundColor: 'rgba(107, 114, 128, 0.1)',
+          fill: true,
+          stack: 'combined',
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#4b5563', font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) label += ': ';
+              if (context.parsed.y !== null) {
+                label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(context.parsed.y);
+              }
+              return label;
+            },
+            footer: function(tooltipItems) {
+              let sum = 0;
+              tooltipItems.forEach(function(tooltipItem) {
+                sum += tooltipItem.parsed.y;
+              });
+              return 'Total: ' + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(sum);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Age' },
+          grid: { display: false }
+        },
+        y: {
+          stacked: true,
+          title: { display: true, text: 'Portfolio Value' },
+          ticks: {
+            callback: function(value) {
+              if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+              if (value >= 1000) return '$' + (value / 1000).toFixed(0) + 'k';
+              return '$' + value;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+run();
+
+// ── Export helpers ────────────────────────────────────────────────────────
+
+function getAssumptions(){
+  const f = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    const val = el.value;
+    if (id === 'ss-ben' || id === 'exp-base' || id.startsWith('init-')) {
+      return '$' + formatComma(val);
+    }
+    return val;
+  };
+  return {
+    'Current Age': f('c-age'),
+    'Retirement Age': f('r-age'),
+    'Plan to Age': f('p-age'),
+    'SS Monthly Benefit': f('ss-ben'),
+    'Annual Expenses': f('exp-base'),
+    'Inflation Rate': f('infl')+'%',
+    'Post-Retirement Return': f('post-ret')+'%',
+    'Growth (Taxable)': f('g-tax')+'%',
+    'Growth (Tax-Def)': f('g-td')+'%',
+    'Growth (Tax-Free)': f('g-tf')+'%',
+    'Growth (HK)': f('g-hk')+'%',
+    'Init Taxable Balance': f('init-taxable'),
+    'Init Tax-Def Balance': f('init-td'),
+    'Init Tax-Free Balance': f('init-tf'),
+    'Init HK Balance': f('init-hk'),
+    'Taxable WD Rate': f('wd-taxable')+'%',
+    'Tax-Def WD Rate': f('wd-td')+'%',
+    'Tax-Def WD Start Age': f('wd-td-age'),
+    'Tax-Free WD Rate': f('wd-tf')+'%',
+    'Tax-Free WD Start Age': f('wd-tf-age'),
+    'HK WD Rate': f('wd-hk')+'%',
+    'Taxable % LTCG': f('cg-pct')+'%',
+    'Taxable % Ordinary': f('ord-pct')+'%',
+    'Tax-Def % Ordinary': f('td-ord-pct')+'%',
+  };
+}
+
+function getTableData(){
+  const headers = ['Age','Phase','Taxable ($)','Tax-Def ($)','RMD ($)','Tax-Free ($)','HK ($)','Total ($)',
+    'Gross Spend ($)','SS Offset ($)','Tax Bill ($)','Total Draw ($)',
+    'Fed Tax ($)','NY State ($)','NYC Tax ($)','NIIT ($)','Withdrawn From'];
+  const rows=[headers];
+  document.querySelectorAll('#tbl-body tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(td=>td.innerText.trim());
+    rows.push(cells);
+  });
+  return rows;
+}
+
+function flash(msg){
+  const el=document.getElementById('export-status');
+  el.textContent=msg;
+  setTimeout(()=>el.textContent='',2500);
+}
+
+function exportCSV(){
+  const rows=getTableData();
+  const asm=getAssumptions();
+  let csv='ASSUMPTIONS\n';
+  Object.entries(asm).forEach(([k,v])=>{ csv+=`"${k}","${v}"\n`; });
+  csv+='\nPROJECTION\n';
+  rows.forEach(row=>{ csv+=row.map(c=>`"${c}"`).join(',')+'\n'; });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  flash('✓ CSV downloaded');
+}
+
+function exportXLSX(){
+  const wb=XLSX.utils.book_new();
+
+  // Assumptions sheet
+  const asmRows=[['Assumption','Value']];
+  Object.entries(getAssumptions()).forEach(([k,v])=>asmRows.push([k,v]));
+  const wsA=XLSX.utils.aoa_to_sheet(asmRows);
+  wsA['!cols']=[{wch:32},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsA,'Assumptions');
+
+  // Projection sheet
+  const tableRows=getTableData();
+  const wsP=XLSX.utils.aoa_to_sheet(tableRows);
+  wsP['!cols']=[{wch:6},{wch:9},{wch:12},{wch:12},{wch:10},{wch:12},{wch:10},{wch:13},
+                {wch:12},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,wsP,'Projection');
+
+  XLSX.writeFile(wb,`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.xlsx`);
+  flash('✓ Excel downloaded');
+}
+
+function exportJSON(){
+  const asm=getAssumptions();
+  const rows=[];
+  document.querySelectorAll('#tbl-body tr').forEach(tr=>{
+    const cells=[...tr.querySelectorAll('td')].map(td=>td.innerText.trim());
+      if(cells[0]) rows.push({
+        age:cells[0],phase:cells[1],taxable:cells[2],taxDef:cells[3],rmd:cells[4],taxFree:cells[5],hk:cells[6],
+        total:cells[7],grossSpend:cells[8],ssOffset:cells[9],taxBill:cells[10],totalDraw:cells[11],
+        fedTax:cells[12],nyState:cells[13],nycTax:cells[14],niit:cells[15],withdrawnFrom:cells[16]
+      });
+  });
+  const out={generated:new Date().toISOString(),assumptions:asm,projection:rows};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`FatFIRE_Projection_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  flash('✓ JSON downloaded');
+}
+
+function exportPDF(){
+  // Populate print-only assumptions summary before printing
+  const asm=getAssumptions();
+  const el=document.getElementById('print-assumptions');
+  el.innerHTML='<strong>Assumptions:</strong> '+
+    Object.entries(asm).map(([k,v])=>`${k}: <strong>${v}</strong>`).join(' · ');
+  window.print();
+  flash('✓ Print dialog opened');
+}
+</script>
+</body>
+</html>
