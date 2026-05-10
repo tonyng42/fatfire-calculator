@@ -1,0 +1,12 @@
+# Universal ignores
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Build / temporary logs
+*.log
+test-results/
+backups/
